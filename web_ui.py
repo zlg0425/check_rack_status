@@ -97,14 +97,6 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
     else:
         chunk_size = 1024 * 1024  # 1MB
     
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-            import json
-            log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:97","message":"sftp_upload_with_cancel start","data":{"server_name":server_name,"ip":ip,"port":port,"filename":filename,"total_size":total_size,"chunk_size":chunk_size},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
-    
     transport = None
     sftp = None
 
@@ -134,13 +126,6 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                 elapsed = current_time - start_time
                 speed = written / elapsed if elapsed > 0 else 0
                 recent_speed = (written - last_log_bytes) / (current_time - last_log_time) if (current_time - last_log_time) > 0 else 0
-                # #region agent log
-                try:
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                        import json
-                        log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:120","message":"sftp_upload progress","data":{"server_name":server_name,"written":written,"total_size":total_size,"progress_pct":int((written/total_size)*100) if total_size > 0 else 0,"avg_speed_mbps":speed/(1024*1024),"recent_speed_mbps":recent_speed/(1024*1024),"chunk_size":chunk_size,"chunk_write_time_ms":(chunk_end_time-chunk_start_time)*1000},"timestamp":int(time_module.time()*1000)}) + '\n')
-                except: pass
-                # #endregion
                 last_log_time = current_time
                 last_log_bytes = written
             
@@ -193,49 +178,16 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                         if batch_id not in batch_fota_tasks or batch_fota_tasks[batch_id].get("cancelled", False):
                             raise Exception("任务已取消")
                 
-                # 记录最后一次callback（上传完成时）
-                if transferred == total or transferred >= total:
-                    # #region agent log
-                    try:
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                            import json
-                            log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H15","location":"web_ui.py:197","message":"putfo upload final callback","data":{"server_name":server_name,"transferred":transferred,"total":total,"is_complete":transferred == total},"timestamp":int(time_module.time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
-                
                 # 每5秒记录一次上传速度和进度
                 current_time = time_module.time()
                 if current_time - putfo_last_log_time >= 5.0:
                     elapsed = current_time - putfo_start_time
                     speed = transferred / elapsed if elapsed > 0 else 0
                     recent_speed = (transferred - putfo_last_transferred) / (current_time - putfo_last_log_time) if (current_time - putfo_last_log_time) > 0 else 0
-                    # #region agent log
-                    try:
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                            import json
-                            log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:210","message":"putfo upload progress","data":{"server_name":server_name,"transferred":transferred,"total":total,"progress_pct":int((transferred/total)*100) if total > 0 else 0,"avg_speed_mbps":speed/(1024*1024),"recent_speed_mbps":recent_speed/(1024*1024)},"timestamp":int(time_module.time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
                     putfo_last_log_time = current_time
                     putfo_last_transferred = transferred
             
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:203","message":"using putfo method for upload (none auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
-            
             sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
-            
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H15","location":"web_ui.py:220","message":"putfo upload completed (none auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size,"file_obj_pos":file_obj.tell(),"file_obj_size":len(data)},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             # 上传完成后清理引用（但保持连接打开，因为可能还需要用于MD5校验）
             return True, remote_path, transport, sftp
@@ -296,49 +248,16 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                         if batch_id not in batch_fota_tasks or batch_fota_tasks[batch_id].get("cancelled", False):
                             raise Exception("任务已取消")
                 
-                # 记录最后一次callback（上传完成时）
-                if transferred == total or transferred >= total:
-                    # #region agent log
-                    try:
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                            import json
-                            log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H15","location":"web_ui.py:280","message":"putfo upload final callback","data":{"server_name":server_name,"transferred":transferred,"total":total,"is_complete":transferred == total},"timestamp":int(time_module.time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
-                
                 # 每5秒记录一次上传速度和进度
                 current_time = time_module.time()
                 if current_time - putfo_last_log_time >= 5.0:
                     elapsed = current_time - putfo_start_time
                     speed = transferred / elapsed if elapsed > 0 else 0
                     recent_speed = (transferred - putfo_last_transferred) / (current_time - putfo_last_log_time) if (current_time - putfo_last_log_time) > 0 else 0
-                    # #region agent log
-                    try:
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                            import json
-                            log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:293","message":"putfo upload progress","data":{"server_name":server_name,"transferred":transferred,"total":total,"progress_pct":int((transferred/total)*100) if total > 0 else 0,"avg_speed_mbps":speed/(1024*1024),"recent_speed_mbps":recent_speed/(1024*1024)},"timestamp":int(time_module.time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
                     putfo_last_log_time = current_time
                     putfo_last_transferred = transferred
             
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:263","message":"using putfo method for upload (key auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
-            
             sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
-            
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H15","location":"web_ui.py:220","message":"putfo upload completed (none auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size,"file_obj_pos":file_obj.tell(),"file_obj_size":len(data)},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             return True, remote_path, transport, sftp
     except Exception as e:
@@ -640,14 +559,6 @@ def api_fota():
 
                     log_fota(f"[{server_name}/{server_ip}:{port}] 上传后MD5校验，本地={local_md5} 远端={r_md5}")
                     update_fota_progress(85, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5[:8]}...")
-                    
-                    # #region agent log
-                    try:
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                            import json
-                            log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"web_ui.py:574","message":"MD5 comparison after upload (single)","data":{"server_name":server_name,"server_ip":server_ip,"port":port,"local_md5":local_md5,"remote_md5":r_md5,"match":local_md5 == r_md5},"timestamp":int(time.time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
 
                     if local_md5 != r_md5:
                         log_fota(f"[{server_name}/{server_ip}:{port}] MD5不一致，本地={local_md5} 远端={r_md5}")
@@ -860,13 +771,6 @@ def api_batch_fota():
                             return
                         
                         ok_md5_pre, r_md5_pre = remote_md5(sname, sip, port, remote_path)
-                        # #region agent log
-                        try:
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                                import json
-                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H8","location":"web_ui.py:853","message":"batch fota MD5 comparison","data":{"batch_id":batch_id,"tid":tid,"sname":sname,"sip":sip,"port":port,"ok_md5_pre":ok_md5_pre,"r_md5_pre":r_md5_pre[:16] if r_md5_pre else None,"local_md5":local_md5[:16]},"timestamp":int(time.time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
                         
                         if ok_md5_pre:
                             cancelled = update_fota_progress(25, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5_pre[:8]}...")
@@ -996,30 +900,8 @@ def api_batch_fota():
                                 return
                         
                         # 等待文件完全写入磁盘（特别是8650系列使用SFTP读取时）
-                        # #region agent log
-                        try:
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                                import json
-                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"web_ui.py:695","message":"waiting before MD5 check after upload","data":{"sname":sname,"sip":sip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
                         time.sleep(1.0)  # 等待1秒确保文件完全写入
-                        
-                        # #region agent log
-                        try:
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                                import json
-                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H14","location":"web_ui.py:703","message":"before remote_md5 batch after upload","data":{"sname":sname,"sip":sip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
                         ok_md5, r_md5 = remote_md5(sname, sip, port, remote_path)
-                        # #region agent log
-                        try:
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                                import json
-                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H14","location":"web_ui.py:677","message":"remote_md5 result batch after upload","data":{"ok_md5":ok_md5,"r_md5":r_md5[:50] if r_md5 else None,"r_md5_len":len(r_md5) if r_md5 else 0},"timestamp":int(time.time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
                         
                         # 检查是否已取消
                         with batch_fota_tasks_lock:
@@ -1056,14 +938,6 @@ def api_batch_fota():
                         if cancelled:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
-                        
-                        # #region agent log
-                        try:
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                                import json
-                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"web_ui.py:895","message":"MD5 comparison after upload","data":{"sname":sname,"sip":sip,"port":port,"local_md5":local_md5,"remote_md5":r_md5,"match":local_md5 == r_md5},"timestamp":int(time.time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
 
                         if local_md5 != r_md5:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] MD5不一致")

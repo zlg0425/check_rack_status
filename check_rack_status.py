@@ -13,7 +13,25 @@ import time
 import threading
 import hashlib
 import shlex
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# 抑制 paramiko 的内部异常输出
+import sys
+if sys.platform == 'win32':
+    # Windows: 使用 nul 设备
+    try:
+        paramiko.util.log_to_file('nul')
+    except:
+        pass
+else:
+    # Linux/Mac: 使用 /dev/null
+    try:
+        paramiko.util.log_to_file('/dev/null')
+    except:
+        pass
+# 设置 paramiko 日志级别为 ERROR，只显示严重错误
+logging.getLogger("paramiko").setLevel(logging.ERROR)
 
 # ============== 配置区域（已移至 config.json） ==============
 CONFIG_FILE = "config.json"
@@ -121,6 +139,21 @@ def is_benign_stderr(msg: str) -> bool:
     return False
 
 
+def filter_benign_stdout(msg: str) -> str:
+    """过滤stdout中的可忽略警告，返回过滤后的字符串"""
+    if not msg:
+        return msg
+    lines = msg.split('\n')
+    filtered_lines = []
+    for line in lines:
+        lower = line.lower()
+        # 忽略主目录不存在的警告（QNX系统常见，出现在stdout中）
+        if "could not chdir to home directory" in lower:
+            continue
+        filtered_lines.append(line)
+    return '\n'.join(filtered_lines).strip()
+
+
 def fetch_version_via_sftp(transport: paramiko.Transport, path: str):
     """尝试通过 SFTP 直接读取版本文件"""
     try:
@@ -177,13 +210,6 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
                 elapsed = current_time - start_time
                 speed = written / elapsed if elapsed > 0 else 0
                 recent_speed = (written - last_log_bytes) / (current_time - last_log_time) if (current_time - last_log_time) > 0 else 0
-                # #region agent log
-                try:
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                        import json
-                        log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:165","message":"sftp_upload progress","data":{"server_name":server_name,"written":written,"total_size":total_size,"progress_pct":int((written/total_size)*100) if total_size > 0 else 0,"avg_speed_mbps":speed/(1024*1024),"recent_speed_mbps":recent_speed/(1024*1024),"chunk_size":chunk_size,"chunk_write_time_ms":(chunk_end_time-chunk_start_time)*1000},"timestamp":int(time.time()*1000)}) + '\n')
-                except: pass
-                # #endregion
                 last_log_time = current_time
                 last_log_bytes = written
             
@@ -207,14 +233,6 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
             def putfo_progress_callback(transferred, total):
                 if progress_callback:
                     progress_callback(transferred, total)
-            
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:198","message":"using putfo method for upload (none auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             sftp.close()
@@ -244,14 +262,6 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
             if progress_callback:
                 progress_callback(transferred, total)
         
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:222","message":"using putfo method for upload (key auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
-        
         sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
         sftp.close()
         transport.close()
@@ -266,56 +276,20 @@ def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
     - LP-8650系列：通过SFTP读取完整文件内容在本地计算MD5（QNX系统没有md5sum）
     - LP-8797系列：使用md5sum命令获取完整文件的MD5（md5sum默认计算完整文件）
     """
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            import json
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H1","location":"check_rack_status.py:197","message":"remote_md5 entry","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"ssh_username":ssh_username},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
     
     # 根据服务器类型选择方法
     use_sftp = server_name.startswith("LP-8650")
     
     if use_sftp:
         # LP-8650系列：通过SFTP读取文件内容，在本地计算MD5
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:208","message":"8650 series: using SFTP to calculate MD5","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         try:
             import hashlib
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:225","message":"SFTP creating transport and client","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             transport = create_transport(server_name, ip, port)
             sftp = paramiko.SFTPClient.from_transport(transport)
-            
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:232","message":"SFTP client created, calling stat","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             # 获取文件大小
             file_stat = sftp.stat(remote_path)
             file_size = file_stat.st_size
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:228","message":"SFTP file stat","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"file_size":file_size},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             # 读取文件内容并计算MD5
             # 统一使用完整文件MD5计算，与本地MD5计算方式保持一致
@@ -327,14 +301,6 @@ def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
                 chunk_size = 4 * 1024 * 1024  # 4MB
             else:
                 chunk_size = 1024 * 1024  # 1MB
-            
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:317","message":"SFTP MD5 calculation strategy","data":{"server_name":server_name,"file_size":file_size,"chunk_size":chunk_size,"method":"full_file_md5"},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             md5_hash = hashlib.md5()
             total_read = 0
@@ -352,98 +318,33 @@ def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
                     if total_read % (50 * 1024 * 1024) < chunk_size:
                         elapsed = time.time() - md5_start_time
                         speed = total_read / elapsed if elapsed > 0 else 0
-                        # #region agent log
-                        try:
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                                import json
-                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H17","location":"check_rack_status.py:335","message":"SFTP reading progress","data":{"server_name":server_name,"total_read":total_read,"file_size":file_size,"progress_pct":int((total_read/file_size)*100) if file_size > 0 else 0,"elapsed_sec":elapsed,"speed_mbps":speed/(1024*1024)},"timestamp":int(time.time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
             
             md5_elapsed = time.time() - md5_start_time
             md5_speed = total_read / md5_elapsed if md5_elapsed > 0 else 0
-            
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H17","location":"check_rack_status.py:352","message":"SFTP file read completed","data":{"server_name":server_name,"total_read":total_read,"file_size":file_size,"method":"full_file_md5","elapsed_sec":md5_elapsed,"speed_mbps":md5_speed/(1024*1024),"estimated_time_for_1gb_sec":(1024*1024*1024)/(md5_speed) if md5_speed > 0 else 0},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             
             md5_val = md5_hash.hexdigest()
             sftp.close()
             transport.close()
             
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:358","message":"SFTP MD5 calculation success (full file)","data":{"server_name":server_name,"md5_val":md5_val,"file_size":file_size,"total_read":total_read},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
-            
             return True, md5_val
         except Exception as e:
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:371","message":"SFTP MD5 calculation failed","data":{"server_name":server_name,"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             return False, f"通过SFTP计算MD5失败: {e}"
     else:
         # LP-8797系列：使用md5sum命令获取MD5
         # md5sum命令默认对完整文件计算MD5，与本地md5_bytes()方法保持一致
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                import json
-                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:381","message":"8797 series: using md5sum command (full file)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"method":"md5sum_full_file"},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         cmd = f"/ifs/usr/bin/md5sum {shlex.quote(remote_path)}"
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                import json
-                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:389","message":"before run_remote_command md5sum","data":{"server_name":server_name,"cmd":cmd},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         ok, out = run_remote_command(server_name, ip, port, cmd)
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                import json
-                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:397","message":"run_remote_command md5sum result","data":{"server_name":server_name,"ok":ok,"out":out[:200] if out else None,"out_len":len(out) if out else 0},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         
         if not ok:
             return False, out
         
         md5_val = parse_md5_output(out)
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                import json
-                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:409","message":"parse_md5_output result from command","data":{"server_name":server_name,"md5_val":md5_val,"method":"md5sum_full_file"},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         
         if not md5_val:
             return False, f"无法解析md5: {out}"
         
         # 验证MD5格式（32位十六进制字符串）
         if len(md5_val) == 32 and all(c in '0123456789abcdef' for c in md5_val.lower()):
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
-                    import json
-                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:422","message":"8797 MD5 calculation success (md5sum full file)","data":{"server_name":server_name,"md5_val":md5_val,"method":"md5sum_full_file"},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             return True, md5_val
         else:
             return False, f"MD5格式无效: {md5_val}"
@@ -481,50 +382,45 @@ def remote_remove(server_name: str, ip: str, port: int, remote_path: str):
 
 def create_transport(server_name: str, ip: str, port: int) -> paramiko.Transport:
     """按认证模式创建并返回已认证的 Transport"""
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            import json
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H12","location":"check_rack_status.py:240","message":"create_transport entry","data":{"server_name":server_name,"ip":ip,"port":port,"ssh_username":ssh_username},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
     auth_mode = resolve_auth_mode(server_name)
-    transport = paramiko.Transport((ip, port))
-    transport.start_client(timeout=ssh_timeout)
+    transport = None
+    try:
+        transport = paramiko.Transport((ip, port))
+        transport.start_client(timeout=ssh_timeout)
+    except Exception as e:
+        if transport:
+            try:
+                transport.close()
+            except:
+                pass
+        raise
 
-    if auth_mode == "none":
-        transport.auth_none(ssh_username)
-        # #region agent log
+    try:
+        if auth_mode == "none":
+            transport.auth_none(ssh_username)
+            return transport
+
+        key_path = resolve_key(server_name, port)
+        if not key_path:
+            transport.close()
+            raise RuntimeError(f"端口{port}未配置私钥")
+        private_key = paramiko.RSAKey.from_private_key_file(key_path)
         try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H12","location":"check_rack_status.py:247","message":"create_transport auth_none success","data":{"ip":ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
+            transport.auth_publickey(username=ssh_username, key=private_key)
+        except paramiko.ssh_exception.SSHException as auth_err:
+            # 如果认证失败且连接已关闭，提供更明确的错误信息
+            if "No existing session" in str(auth_err) or not transport.is_alive():
+                transport.close()
+                raise paramiko.ssh_exception.SSHException(f"Connection closed by remote host during authentication: {auth_err}")
+            raise
         return transport
-
-    key_path = resolve_key(server_name, port)
-    if not key_path:
-        transport.close()
-        raise RuntimeError(f"端口{port}未配置私钥")
-
-    private_key = paramiko.RSAKey.from_private_key_file(key_path)
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            import json
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H13","location":"check_rack_status.py:256","message":"create_transport before auth_publickey","data":{"ip":ip,"port":port,"ssh_username":ssh_username,"key_path":key_path},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
-    transport.auth_publickey(username=ssh_username, key=private_key)
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            import json
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H13","location":"check_rack_status.py:256","message":"create_transport auth_publickey success","data":{"ip":ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
-    return transport
+    except Exception as e:
+        if transport:
+            try:
+                transport.close()
+            except:
+                pass
+        raise
 
 
 def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_file: str = None, tail_wait: int = 2):
@@ -537,13 +433,6 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
 
     def tail_log():
         try:
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:397","message":"tail_log starting logview","data":{"server_name":server_name,"ip":ip,"port":port,"log_file":log_file},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             transport_b = create_transport(server_name, ip, port)
             session_b = transport_b.open_session(timeout=ssh_timeout)
             # 根据服务器类型选择不同的grep路径
@@ -554,13 +443,6 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
             else:
                 grep_path = "/ifs/usr/bin/grep"
             logview_cmd = f"LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 /opt/usr/bin/logview -w | {grep_path} UCM"
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:530","message":"tail_log executing logview command","data":{"server_name":server_name,"ip":ip,"port":port,"logview_cmd":logview_cmd,"grep_path":grep_path},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             session_b.exec_command(logview_cmd)
             log_bytes = 0
             with open(log_file, "ab") as lf:
@@ -588,21 +470,7 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
                     time.sleep(0.1)
             session_b.close()
             transport_b.close()
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:432","message":"tail_log completed","data":{"server_name":server_name,"ip":ip,"port":port,"log_file":log_file,"log_bytes":log_bytes},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
         except Exception as e:
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:437","message":"tail_log exception","data":{"server_name":server_name,"ip":ip,"port":port,"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             log_err.append(str(e))
 
     t = threading.Thread(target=tail_log, daemon=True)
@@ -612,48 +480,22 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
     time.sleep(2)
 
     try:
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:450","message":"run_ucm creating transport_a","data":{"server_name":server_name,"ip":ip,"port":port,"ucm_file":ucm_file},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         transport_a = create_transport(server_name, ip, port)
         session_a = transport_a.open_session(timeout=ssh_timeout)
-        # 8650系列不需要LD_LIBRARY_PATH，8797系列需要
+        # 8650系列需要LD_LIBRARY_PATH包含/ifs/lib64/camera（libFUCamera.so的路径）和/ifs/lib64
+        # 8797系列也需要LD_LIBRARY_PATH
         if server_name.startswith("LP-8650"):
-            ucm_cmd = f"/opt/usr/bin/lpUCM -i {shlex.quote(ucm_file)}"
+            # 8650系列：libFUCamera.so在/ifs/lib64/camera/下，需要包含/ifs/lib64/camera和/ifs/lib64
+            ucm_cmd = f"LD_LIBRARY_PATH=/ifs/lib64/camera:/ifs/lib64:/opt/usr/lib64:/opt/usr/lib /opt/usr/bin/lpUCM -i {shlex.quote(ucm_file)}"
         else:
             ucm_cmd = f"LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 /opt/usr/bin/lpUCM -i {shlex.quote(ucm_file)}"
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:457","message":"run_ucm executing lpUCM command","data":{"server_name":server_name,"ip":ip,"port":port,"ucm_cmd":ucm_cmd},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         session_a.exec_command(ucm_cmd)
         # 读取全部输出
         stdout_data, stderr_data = _read_all(session_a)
         exit_code = session_a.recv_exit_status()
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:465","message":"run_ucm command completed","data":{"server_name":server_name,"ip":ip,"port":port,"exit_code":exit_code,"stdout_len":len(stdout_data) if stdout_data else 0,"stderr_len":len(stderr_data) if stderr_data else 0,"stderr_preview":stderr_data[:200] if stderr_data else None},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         session_a.close()
         transport_a.close()
     except Exception as e:
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:473","message":"run_ucm exception","data":{"server_name":server_name,"ip":ip,"port":port,"ucm_file":ucm_file,"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         log_stop.set()
         t.join(timeout=2)
         return False, f"执行 lpUCM 失败: {e}"
@@ -718,10 +560,11 @@ def _read_all(session: paramiko.Channel) -> tuple[str, str]:
         stdout_chunks.append(session.recv(4096))
     while session.recv_stderr_ready():
         stderr_chunks.append(session.recv_stderr(4096))
-    return (
-        b"".join(stdout_chunks).decode(errors="ignore").strip(),
-        b"".join(stderr_chunks).decode(errors="ignore").strip(),
-    )
+    stdout_raw = b"".join(stdout_chunks).decode(errors="ignore")
+    stderr_raw = b"".join(stderr_chunks).decode(errors="ignore")
+    # 过滤stdout中的可忽略警告
+    stdout_filtered = filter_benign_stdout(stdout_raw).strip()
+    return stdout_filtered, stderr_raw.strip()
 
 
 def remote_exec_collect(server_name: str, ip: str, port: int, command: str, workdir: str = "/"):
@@ -795,21 +638,7 @@ def remote_shell_exec(server_name: str, ip: str, port: int, command: str, workdi
 
 def run_remote_command(server_name: str, ip: str, port: int, command: str):
     """根据认证模式执行远程命令，返回 (success, output_or_error)；使用 pty 并等待结束读取全部输出"""
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            import json
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:444","message":"run_remote_command entry","data":{"server_name":server_name,"ip":ip,"port":port,"command":command,"ssh_username":ssh_username},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
     auth_mode = resolve_auth_mode(server_name)
-    # #region agent log
-    try:
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            import json
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:446","message":"auth_mode resolved","data":{"auth_mode":auth_mode},"timestamp":int(time.time()*1000)}) + '\n')
-    except: pass
-    # #endregion
 
     # 若是简单的 cat 路径，优先尝试 SFTP 读取，避免 shell 环境问题
     cat_prefix = "cat "
@@ -836,13 +665,6 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
             session.get_pty()  # 申请伪终端保证输出完整
             session.exec_command(f"cd / && {command}")
             output, err_out = _read_all(session)
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:471","message":"command executed","data":{"command":command,"output_len":len(output) if output else 0,"err_out_len":len(err_out) if err_out else 0,"err_out":err_out[:200] if err_out else None},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             session.close()
             transport.close()
 
@@ -850,13 +672,6 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
                 return False, err_out
             return True, output or err_out
         except Exception as e:
-            # #region agent log
-            try:
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    import json
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H8","location":"check_rack_status.py:479","message":"auth_mode none exception","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":int(time.time()*1000)}) + '\n')
-            except: pass
-            # #endregion
             return False, str(e)
 
     # key 模式
@@ -864,27 +679,25 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
     if not key_path:
         return False, f"端口{port}未配置私钥"
 
+    transport = None
     try:
         private_key = paramiko.RSAKey.from_private_key_file(key_path)
 
         # Transport 方式，便于先尝试 SFTP 再执行命令
         transport = paramiko.Transport((ip, port))
         transport.start_client(timeout=ssh_timeout)
-        # #region agent log
+        # 检查连接是否仍然有效
+        if not transport.is_authenticated() and not transport.is_alive():
+            transport.close()
+            raise paramiko.ssh_exception.SSHException("Connection closed by remote host after start_client")
         try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:493","message":"before auth_publickey","data":{"ip":ip,"port":port,"ssh_username":ssh_username,"key_path":key_path},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
-        transport.auth_publickey(username=ssh_username, key=private_key)
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:493","message":"auth_publickey success","data":{"ip":ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
+            transport.auth_publickey(username=ssh_username, key=private_key)
+        except paramiko.ssh_exception.SSHException as auth_err:
+            # 如果认证失败且连接已关闭，提供更明确的错误信息
+            if "No existing session" in str(auth_err) or not transport.is_alive():
+                transport.close()
+                raise paramiko.ssh_exception.SSHException(f"Connection closed by remote host during authentication: {auth_err}")
+            raise
 
         if file_path:
             ok, data = fetch_version_via_sftp(transport, file_path)
@@ -897,26 +710,18 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
         session.get_pty()  # 申请伪终端保证输出完整
         session.exec_command(f"cd / && {command}")
         output, err_out = _read_all(session)
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H10","location":"check_rack_status.py:504","message":"command executed key mode","data":{"command":command,"output_len":len(output) if output else 0,"err_out_len":len(err_out) if err_out else 0,"err_out":err_out[:200] if err_out else None},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
         session.close()
         transport.close()
         if err_out and not is_benign_stderr(err_out):
             return False, err_out
         return True, output or err_out
     except Exception as e:
-        # #region agent log
-        try:
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                import json
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H11","location":"check_rack_status.py:511","message":"key mode exception","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":int(time.time()*1000)}) + '\n')
-        except: pass
-        # #endregion
+        # 确保在异常时关闭transport
+        if transport:
+            try:
+                transport.close()
+            except:
+                pass
         return False, str(e)
 
 
@@ -964,27 +769,77 @@ def check_ssh_login(server_name, ip, port):
         
         # 加载对应端口的私钥
         private_key = paramiko.RSAKey.from_private_key_file(key_path)
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
-        # 使用指定端口连接
-        client.connect(
-            hostname=ip,
-            port=port,  # 关键：指定端口号
-            username=ssh_username,
-            pkey=private_key,
-            timeout=ssh_timeout,
-            banner_timeout=30
-        )
+        # 使用指定端口连接，对临时性错误进行重试
+        max_retries = 3  # 增加重试次数，提高成功率
+        last_error = None
+        for attempt in range(max_retries):
+            client = None
+            try:
+                client = paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                
+                client.connect(
+                    hostname=ip,
+                    port=port,  # 关键：指定端口号
+                    username=ssh_username,
+                    pkey=private_key,
+                    timeout=ssh_timeout,
+                    banner_timeout=30
+                )
+                
+                stdin, stdout, stderr = client.exec_command('echo "SSH test"', timeout=5)
+                output = stdout.read().decode().strip()
+                
+                client.close()
+                return True, f"端口{port} SSH登录成功"
+            except (paramiko.SSHException, OSError, socket.error) as e:
+                last_error = e
+                error_msg = str(e)
+                # 确保关闭失败的连接
+                if client:
+                    try:
+                        client.close()
+                    except:
+                        pass
+                # 如果是临时性连接错误（如 "No existing session"、"Error reading SSH protocol banner"、OSError等），进行重试
+                if ("No existing session" in error_msg or 
+                    "Connection closed" in error_msg or 
+                    "Error reading SSH protocol banner" in error_msg or
+                    "WinError 10038" in error_msg or
+                    isinstance(e, OSError) or
+                    isinstance(e, socket.error)):
+                    if attempt < max_retries - 1:
+                        # 等待一小段时间后重试
+                        import time
+                        # 增加重试间隔，给服务器更多时间恢复
+                        time.sleep(1.0 if attempt == 0 else 1.5)
+                        continue
+                    # 重试失败，返回友好的错误信息
+                    retry_error_msg = f"端口{port} SSH连接临时性错误（已重试）: {error_msg}"
+                    return False, retry_error_msg
+                # 其他SSH错误直接返回
+                return False, f"端口{port} SSH连接错误: {error_msg}"
+            except Exception as e:
+                # 确保关闭失败的连接
+                if client:
+                    try:
+                        client.close()
+                    except:
+                        pass
+                # 非SSH异常，直接返回
+                return False, f"端口{port} 其他错误: {str(e)}"
         
-        stdin, stdout, stderr = client.exec_command('echo "SSH test"', timeout=5)
-        output = stdout.read().decode().strip()
-        
-        client.close()
-        return True, f"端口{port} SSH登录成功"
+        # 所有重试都失败
+        if last_error:
+            return False, f"端口{port} SSH连接错误（已重试{max_retries}次）: {str(last_error)}"
+        return False, f"端口{port} SSH连接失败"
     except paramiko.AuthenticationException:
         return False, f"端口{port} SSH认证失败（密钥不匹配）"
     except paramiko.SSHException as e:
+        error_msg = str(e)
+        if "No existing session" in error_msg or "Connection closed" in error_msg:
+            return False, f"端口{port} SSH连接临时性错误: {error_msg}"
         return False, f"端口{port} SSH连接错误: {str(e)}"
     except Exception as e:
         return False, f"端口{port} 其他错误: {str(e)}"
@@ -1007,31 +862,46 @@ def check_single_server(server_name, server_ip):
         'version_9999_detail': ''
     }
     
-    # 检查22端口连通性和SSH
-    if check_port(server_ip, 22):
-        results['port_22'] = 'online'
-        ssh_success, ssh_detail = check_ssh_login(server_name, server_ip, 22)
-        results['port_22_ssh'] = 'online' if ssh_success else 'offline'
-        results['port_22_detail'] = ssh_detail
-        if ssh_success and version_command:
-            ok, ver = run_remote_command(server_name, server_ip, 22, version_command)
-            if ok:
-                results['version'] = ver
-            else:
-                results['version_detail'] = ver
-    
-    # 检查9999端口连通性和SSH
-    if check_port(server_ip, 9999):
-        results['port_9999'] = 'online'
-        ssh_success, ssh_detail = check_ssh_login(server_name, server_ip, 9999)
-        results['port_9999_ssh'] = 'online' if ssh_success else 'offline'
-        results['port_9999_detail'] = ssh_detail
-        if ssh_success and version_command:
-            ok, ver = run_remote_command(server_name, server_ip, 9999, version_command)
-            if ok:
-                results['version_9999'] = ver
-            else:
-                results['version_9999_detail'] = ver
+    try:
+        # 检查22端口连通性和SSH
+        if check_port(server_ip, 22):
+            results['port_22'] = 'online'
+            try:
+                ssh_success, ssh_detail = check_ssh_login(server_name, server_ip, 22)
+                results['port_22_ssh'] = 'online' if ssh_success else 'offline'
+                results['port_22_detail'] = ssh_detail
+                if ssh_success and version_command:
+                    ok, ver = run_remote_command(server_name, server_ip, 22, version_command)
+                    if ok:
+                        results['version'] = ver
+                    else:
+                        results['version_detail'] = ver
+            except Exception as e:
+                # 静默处理SSH连接错误，避免输出到控制台
+                results['port_22_ssh'] = 'offline'
+                results['port_22_detail'] = f"SSH检查异常: {str(e)}"
+        
+        # 检查9999端口连通性和SSH
+        if check_port(server_ip, 9999):
+            results['port_9999'] = 'online'
+            try:
+                ssh_success, ssh_detail = check_ssh_login(server_name, server_ip, 9999)
+                results['port_9999_ssh'] = 'online' if ssh_success else 'offline'
+                results['port_9999_detail'] = ssh_detail
+                if ssh_success and version_command:
+                    ok, ver = run_remote_command(server_name, server_ip, 9999, version_command)
+                    if ok:
+                        results['version_9999'] = ver
+                    else:
+                        results['version_9999_detail'] = ver
+            except Exception as e:
+                # 静默处理SSH连接错误，避免输出到控制台
+                results['port_9999_ssh'] = 'offline'
+                results['port_9999_detail'] = f"SSH检查异常: {str(e)}"
+    except Exception as e:
+        # 捕获所有未预期的异常，避免程序崩溃
+        results['port_22_detail'] = f"检查异常: {str(e)}"
+        results['port_9999_detail'] = f"检查异常: {str(e)}"
     
     return results
 
