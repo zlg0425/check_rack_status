@@ -112,7 +112,11 @@ def is_benign_stderr(msg: str) -> bool:
     if not msg:
         return True
     lower = msg.lower()
+    # 忽略主目录不存在的警告（QNX系统常见）
     if "could not chdir to home directory" in lower:
+        return True
+    # 忽略ldd库加载失败的警告（某些QNX系统可能缺少某些库，但不影响lpUCM执行）
+    if "ldd:fatality" in lower and "could not load library" in lower:
         return True
     return False
 
@@ -145,14 +149,44 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
     safe_dir = target_dir.rstrip("/") or "/"
     remote_path = posixpath.join(safe_dir, filename)
     total_size = len(data)
-    chunk_size = 64 * 1024  # 64KB chunks
+    # 根据文件大小动态调整chunk size以提高上传速度
+    # 使用更大的chunk size以减少网络往返次数和系统调用开销
+    if total_size > 100 * 1024 * 1024:  # >100MB
+        chunk_size = 4 * 1024 * 1024  # 4MB，进一步增大以提高速度
+    elif total_size > 10 * 1024 * 1024:  # >10MB
+        chunk_size = 2 * 1024 * 1024  # 2MB
+    else:
+        chunk_size = 1024 * 1024  # 1MB
 
     def write_with_progress(f, data_bytes):
         written = 0
+        start_time = time.time()
+        last_log_time = start_time
+        last_log_bytes = 0
+        
         while written < total_size:
+            chunk_start_time = time.time()
             chunk = data_bytes[written:written + chunk_size]
             f.write(chunk)
+            chunk_end_time = time.time()
             written += len(chunk)
+            
+            # 每5秒记录一次上传速度和进度
+            current_time = time.time()
+            if current_time - last_log_time >= 5.0:
+                elapsed = current_time - start_time
+                speed = written / elapsed if elapsed > 0 else 0
+                recent_speed = (written - last_log_bytes) / (current_time - last_log_time) if (current_time - last_log_time) > 0 else 0
+                # #region agent log
+                try:
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                        import json
+                        log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:165","message":"sftp_upload progress","data":{"server_name":server_name,"written":written,"total_size":total_size,"progress_pct":int((written/total_size)*100) if total_size > 0 else 0,"avg_speed_mbps":speed/(1024*1024),"recent_speed_mbps":recent_speed/(1024*1024),"chunk_size":chunk_size,"chunk_write_time_ms":(chunk_end_time-chunk_start_time)*1000},"timestamp":int(time.time()*1000)}) + '\n')
+                except: pass
+                # #endregion
+                last_log_time = current_time
+                last_log_bytes = written
+            
             if progress_callback:
                 progress_callback(written, total_size)
 
@@ -165,8 +199,24 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
 
             sftp = paramiko.SFTPClient.from_transport(transport)
             ensure_remote_dir(sftp, safe_dir)
-            with sftp.file(remote_path, "wb") as f:
-                write_with_progress(f, data)
+            
+            # 使用putfo方法上传，可能比file.write()更高效
+            import io
+            file_obj = io.BytesIO(data)
+            
+            def putfo_progress_callback(transferred, total):
+                if progress_callback:
+                    progress_callback(transferred, total)
+            
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:198","message":"using putfo method for upload (none auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            
+            sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             sftp.close()
             transport.close()
             return True, remote_path
@@ -185,8 +235,24 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
 
         sftp = paramiko.SFTPClient.from_transport(transport)
         ensure_remote_dir(sftp, safe_dir)
-        with sftp.file(remote_path, "wb") as f:
-            write_with_progress(f, data)
+        
+        # 使用putfo方法上传，可能比file.write()更高效
+        import io
+        file_obj = io.BytesIO(data)
+        
+        def putfo_progress_callback(transferred, total):
+            if progress_callback:
+                progress_callback(transferred, total)
+        
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:222","message":"using putfo method for upload (key auth)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"total_size":total_size},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        
+        sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
         sftp.close()
         transport.close()
         return True, remote_path
@@ -195,16 +261,192 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
 
 
 def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
-    """计算远端文件 MD5"""
-    # 兼容 QNX：优先使用 /ifs/usr/bin/md5sum（指向 toybox），路径写死避免 PATH 问题
-    cmd = f"/ifs/usr/bin/md5sum {shlex.quote(remote_path)}"
-    ok, out = run_remote_command(server_name, ip, port, cmd)
-    if not ok:
-        return False, out
-    md5_val = parse_md5_output(out)
-    if not md5_val:
-        return False, f"无法解析md5: {out}"
-    return True, md5_val
+    """计算远端文件 MD5
+    根据服务器类型选择不同方法，但都计算完整文件的MD5，与本地md5_bytes()方法保持一致：
+    - LP-8650系列：通过SFTP读取完整文件内容在本地计算MD5（QNX系统没有md5sum）
+    - LP-8797系列：使用md5sum命令获取完整文件的MD5（md5sum默认计算完整文件）
+    """
+    # #region agent log
+    try:
+        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            import json
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H1","location":"check_rack_status.py:197","message":"remote_md5 entry","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"ssh_username":ssh_username},"timestamp":int(time.time()*1000)}) + '\n')
+    except: pass
+    # #endregion
+    
+    # 根据服务器类型选择方法
+    use_sftp = server_name.startswith("LP-8650")
+    
+    if use_sftp:
+        # LP-8650系列：通过SFTP读取文件内容，在本地计算MD5
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:208","message":"8650 series: using SFTP to calculate MD5","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        try:
+            import hashlib
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:225","message":"SFTP creating transport and client","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            transport = create_transport(server_name, ip, port)
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:232","message":"SFTP client created, calling stat","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            
+            # 获取文件大小
+            file_stat = sftp.stat(remote_path)
+            file_size = file_stat.st_size
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:228","message":"SFTP file stat","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"file_size":file_size},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            
+            # 读取文件内容并计算MD5
+            # 统一使用完整文件MD5计算，与本地MD5计算方式保持一致
+            # 不再使用采样MD5，确保与本地hashlib.md5()计算结果一致
+            # 根据文件大小动态调整chunk size以提高读取速度
+            if file_size > 100 * 1024 * 1024:  # >100MB
+                chunk_size = 8 * 1024 * 1024  # 8MB，进一步增大以提高速度
+            elif file_size > 10 * 1024 * 1024:  # >10MB
+                chunk_size = 4 * 1024 * 1024  # 4MB
+            else:
+                chunk_size = 1024 * 1024  # 1MB
+            
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                    import json
+                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:317","message":"SFTP MD5 calculation strategy","data":{"server_name":server_name,"file_size":file_size,"chunk_size":chunk_size,"method":"full_file_md5"},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            
+            md5_hash = hashlib.md5()
+            total_read = 0
+            md5_start_time = time.time()
+            
+            with sftp.file(remote_path, "rb") as remote_file:
+                # 完整读取文件内容计算MD5，与本地md5_bytes()方法保持一致
+                while True:
+                    chunk = remote_file.read(chunk_size)
+                    if not chunk:
+                        break
+                    md5_hash.update(chunk)
+                    total_read += len(chunk)
+                    # 每读取50MB记录一次进度（减少日志频率）
+                    if total_read % (50 * 1024 * 1024) < chunk_size:
+                        elapsed = time.time() - md5_start_time
+                        speed = total_read / elapsed if elapsed > 0 else 0
+                        # #region agent log
+                        try:
+                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                                import json
+                                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H17","location":"check_rack_status.py:335","message":"SFTP reading progress","data":{"server_name":server_name,"total_read":total_read,"file_size":file_size,"progress_pct":int((total_read/file_size)*100) if file_size > 0 else 0,"elapsed_sec":elapsed,"speed_mbps":speed/(1024*1024)},"timestamp":int(time.time()*1000)}) + '\n')
+                        except: pass
+                        # #endregion
+            
+            md5_elapsed = time.time() - md5_start_time
+            md5_speed = total_read / md5_elapsed if md5_elapsed > 0 else 0
+            
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                    import json
+                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H17","location":"check_rack_status.py:352","message":"SFTP file read completed","data":{"server_name":server_name,"total_read":total_read,"file_size":file_size,"method":"full_file_md5","elapsed_sec":md5_elapsed,"speed_mbps":md5_speed/(1024*1024),"estimated_time_for_1gb_sec":(1024*1024*1024)/(md5_speed) if md5_speed > 0 else 0},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            
+            md5_val = md5_hash.hexdigest()
+            sftp.close()
+            transport.close()
+            
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                    import json
+                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:358","message":"SFTP MD5 calculation success (full file)","data":{"server_name":server_name,"md5_val":md5_val,"file_size":file_size,"total_read":total_read},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            
+            return True, md5_val
+        except Exception as e:
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                    import json
+                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:371","message":"SFTP MD5 calculation failed","data":{"server_name":server_name,"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            return False, f"通过SFTP计算MD5失败: {e}"
+    else:
+        # LP-8797系列：使用md5sum命令获取MD5
+        # md5sum命令默认对完整文件计算MD5，与本地md5_bytes()方法保持一致
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                import json
+                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:381","message":"8797 series: using md5sum command (full file)","data":{"server_name":server_name,"ip":ip,"port":port,"remote_path":remote_path,"method":"md5sum_full_file"},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        cmd = f"/ifs/usr/bin/md5sum {shlex.quote(remote_path)}"
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                import json
+                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:389","message":"before run_remote_command md5sum","data":{"server_name":server_name,"cmd":cmd},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        ok, out = run_remote_command(server_name, ip, port, cmd)
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                import json
+                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:397","message":"run_remote_command md5sum result","data":{"server_name":server_name,"ok":ok,"out":out[:200] if out else None,"out_len":len(out) if out else 0},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        
+        if not ok:
+            return False, out
+        
+        md5_val = parse_md5_output(out)
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                import json
+                log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:409","message":"parse_md5_output result from command","data":{"server_name":server_name,"md5_val":md5_val,"method":"md5sum_full_file"},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        
+        if not md5_val:
+            return False, f"无法解析md5: {out}"
+        
+        # 验证MD5格式（32位十六进制字符串）
+        if len(md5_val) == 32 and all(c in '0123456789abcdef' for c in md5_val.lower()):
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as log_file:
+                    import json
+                    log_file.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H16","location":"check_rack_status.py:422","message":"8797 MD5 calculation success (md5sum full file)","data":{"server_name":server_name,"md5_val":md5_val,"method":"md5sum_full_file"},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            return True, md5_val
+        else:
+            return False, f"MD5格式无效: {md5_val}"
 
 
 def remote_exists(server_name: str, ip: str, port: int, remote_path: str):
@@ -239,12 +481,26 @@ def remote_remove(server_name: str, ip: str, port: int, remote_path: str):
 
 def create_transport(server_name: str, ip: str, port: int) -> paramiko.Transport:
     """按认证模式创建并返回已认证的 Transport"""
+    # #region agent log
+    try:
+        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            import json
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H12","location":"check_rack_status.py:240","message":"create_transport entry","data":{"server_name":server_name,"ip":ip,"port":port,"ssh_username":ssh_username},"timestamp":int(time.time()*1000)}) + '\n')
+    except: pass
+    # #endregion
     auth_mode = resolve_auth_mode(server_name)
     transport = paramiko.Transport((ip, port))
     transport.start_client(timeout=ssh_timeout)
 
     if auth_mode == "none":
         transport.auth_none(ssh_username)
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H12","location":"check_rack_status.py:247","message":"create_transport auth_none success","data":{"ip":ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         return transport
 
     key_path = resolve_key(server_name, port)
@@ -253,7 +509,21 @@ def create_transport(server_name: str, ip: str, port: int) -> paramiko.Transport
         raise RuntimeError(f"端口{port}未配置私钥")
 
     private_key = paramiko.RSAKey.from_private_key_file(key_path)
+    # #region agent log
+    try:
+        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            import json
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H13","location":"check_rack_status.py:256","message":"create_transport before auth_publickey","data":{"ip":ip,"port":port,"ssh_username":ssh_username,"key_path":key_path},"timestamp":int(time.time()*1000)}) + '\n')
+    except: pass
+    # #endregion
     transport.auth_publickey(username=ssh_username, key=private_key)
+    # #region agent log
+    try:
+        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            import json
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H13","location":"check_rack_status.py:256","message":"create_transport auth_publickey success","data":{"ip":ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
+    except: pass
+    # #endregion
     return transport
 
 
@@ -267,12 +537,32 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
 
     def tail_log():
         try:
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:397","message":"tail_log starting logview","data":{"server_name":server_name,"ip":ip,"port":port,"log_file":log_file},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
             transport_b = create_transport(server_name, ip, port)
             session_b = transport_b.open_session(timeout=ssh_timeout)
-            session_b.exec_command(
-                "LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 "
-                "/opt/usr/bin/logview -w | /ifs/usr/bin/grep UCM"
-            )
+            # 根据服务器类型选择不同的grep路径
+            # 8650系列：使用 /ifs/bin/grep
+            # 8797系列：使用 /ifs/usr/bin/grep
+            if server_name.startswith("LP-8650"):
+                grep_path = "/ifs/bin/grep"
+            else:
+                grep_path = "/ifs/usr/bin/grep"
+            logview_cmd = f"LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 /opt/usr/bin/logview -w | {grep_path} UCM"
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:530","message":"tail_log executing logview command","data":{"server_name":server_name,"ip":ip,"port":port,"logview_cmd":logview_cmd,"grep_path":grep_path},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            session_b.exec_command(logview_cmd)
+            log_bytes = 0
             with open(log_file, "ab") as lf:
                 while not log_stop.is_set():
                     if session_b.recv_ready():
@@ -280,6 +570,7 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
                         if chunk:
                             lf.write(chunk)
                             lf.flush()
+                            log_bytes += len(chunk)
                             try:
                                 print(chunk.decode(errors="ignore"), end="")
                             except Exception:
@@ -289,6 +580,7 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
                         if chunk:
                             lf.write(chunk)
                             lf.flush()
+                            log_bytes += len(chunk)
                             try:
                                 print(chunk.decode(errors="ignore"), end="")
                             except Exception:
@@ -296,7 +588,21 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
                     time.sleep(0.1)
             session_b.close()
             transport_b.close()
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:432","message":"tail_log completed","data":{"server_name":server_name,"ip":ip,"port":port,"log_file":log_file,"log_bytes":log_bytes},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
         except Exception as e:
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H6","location":"check_rack_status.py:437","message":"tail_log exception","data":{"server_name":server_name,"ip":ip,"port":port,"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
             log_err.append(str(e))
 
     t = threading.Thread(target=tail_log, daemon=True)
@@ -306,17 +612,48 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
     time.sleep(2)
 
     try:
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:450","message":"run_ucm creating transport_a","data":{"server_name":server_name,"ip":ip,"port":port,"ucm_file":ucm_file},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         transport_a = create_transport(server_name, ip, port)
         session_a = transport_a.open_session(timeout=ssh_timeout)
-        session_a.exec_command(
-            f"LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 /opt/usr/bin/lpUCM -i {shlex.quote(ucm_file)}"
-        )
+        # 8650系列不需要LD_LIBRARY_PATH，8797系列需要
+        if server_name.startswith("LP-8650"):
+            ucm_cmd = f"/opt/usr/bin/lpUCM -i {shlex.quote(ucm_file)}"
+        else:
+            ucm_cmd = f"LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 /opt/usr/bin/lpUCM -i {shlex.quote(ucm_file)}"
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:457","message":"run_ucm executing lpUCM command","data":{"server_name":server_name,"ip":ip,"port":port,"ucm_cmd":ucm_cmd},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        session_a.exec_command(ucm_cmd)
         # 读取全部输出
         stdout_data, stderr_data = _read_all(session_a)
         exit_code = session_a.recv_exit_status()
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:465","message":"run_ucm command completed","data":{"server_name":server_name,"ip":ip,"port":port,"exit_code":exit_code,"stdout_len":len(stdout_data) if stdout_data else 0,"stderr_len":len(stderr_data) if stderr_data else 0,"stderr_preview":stderr_data[:200] if stderr_data else None},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         session_a.close()
         transport_a.close()
     except Exception as e:
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:473","message":"run_ucm exception","data":{"server_name":server_name,"ip":ip,"port":port,"ucm_file":ucm_file,"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         log_stop.set()
         t.join(timeout=2)
         return False, f"执行 lpUCM 失败: {e}"
@@ -332,6 +669,21 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
     success_marker = "swdl_lun_switch_bank:399"
     stderr_lower = stderr_data.lower() if stderr_data else ""
     success_in_stderr = success_marker in stderr_lower if stderr_lower else False
+
+    # 过滤可忽略的stderr警告
+    if stderr_data and is_benign_stderr(stderr_data):
+        # 如果stderr只包含可忽略的警告，且命令成功执行，则视为成功
+        if exit_code == 0 or success_in_stderr:
+            return True, stdout_data.strip() or stderr_data.strip()
+        # 如果命令失败，但stderr只包含可忽略的警告，检查是否有其他错误信息
+        # 过滤掉可忽略的警告后，如果还有其他错误信息，则返回失败
+        filtered_stderr = "\n".join([line for line in stderr_data.split("\n") if not is_benign_stderr(line)])
+        if filtered_stderr.strip():
+            return False, f"lpUCM stderr: {filtered_stderr.strip()}"
+        # 如果过滤后没有其他错误信息，且exit_code不为0，检查是否有成功标记
+        if success_in_stderr:
+            return True, stdout_data.strip() or stderr_data.strip()
+        return False, f"lpUCM执行失败，退出码: {exit_code}"
 
     if exit_code == 0 or success_in_stderr:
         return True, stdout_data.strip() or stderr_data.strip()
@@ -443,7 +795,21 @@ def remote_shell_exec(server_name: str, ip: str, port: int, command: str, workdi
 
 def run_remote_command(server_name: str, ip: str, port: int, command: str):
     """根据认证模式执行远程命令，返回 (success, output_or_error)；使用 pty 并等待结束读取全部输出"""
+    # #region agent log
+    try:
+        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            import json
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:444","message":"run_remote_command entry","data":{"server_name":server_name,"ip":ip,"port":port,"command":command,"ssh_username":ssh_username},"timestamp":int(time.time()*1000)}) + '\n')
+    except: pass
+    # #endregion
     auth_mode = resolve_auth_mode(server_name)
+    # #region agent log
+    try:
+        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            import json
+            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H5","location":"check_rack_status.py:446","message":"auth_mode resolved","data":{"auth_mode":auth_mode},"timestamp":int(time.time()*1000)}) + '\n')
+    except: pass
+    # #endregion
 
     # 若是简单的 cat 路径，优先尝试 SFTP 读取，避免 shell 环境问题
     cat_prefix = "cat "
@@ -470,6 +836,13 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
             session.get_pty()  # 申请伪终端保证输出完整
             session.exec_command(f"cd / && {command}")
             output, err_out = _read_all(session)
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H7","location":"check_rack_status.py:471","message":"command executed","data":{"command":command,"output_len":len(output) if output else 0,"err_out_len":len(err_out) if err_out else 0,"err_out":err_out[:200] if err_out else None},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
             session.close()
             transport.close()
 
@@ -477,6 +850,13 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
                 return False, err_out
             return True, output or err_out
         except Exception as e:
+            # #region agent log
+            try:
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    import json
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H8","location":"check_rack_status.py:479","message":"auth_mode none exception","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":int(time.time()*1000)}) + '\n')
+            except: pass
+            # #endregion
             return False, str(e)
 
     # key 模式
@@ -490,7 +870,21 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
         # Transport 方式，便于先尝试 SFTP 再执行命令
         transport = paramiko.Transport((ip, port))
         transport.start_client(timeout=ssh_timeout)
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:493","message":"before auth_publickey","data":{"ip":ip,"port":port,"ssh_username":ssh_username,"key_path":key_path},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         transport.auth_publickey(username=ssh_username, key=private_key)
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H9","location":"check_rack_status.py:493","message":"auth_publickey success","data":{"ip":ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
 
         if file_path:
             ok, data = fetch_version_via_sftp(transport, file_path)
@@ -503,12 +897,26 @@ def run_remote_command(server_name: str, ip: str, port: int, command: str):
         session.get_pty()  # 申请伪终端保证输出完整
         session.exec_command(f"cd / && {command}")
         output, err_out = _read_all(session)
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H10","location":"check_rack_status.py:504","message":"command executed key mode","data":{"command":command,"output_len":len(output) if output else 0,"err_out_len":len(err_out) if err_out else 0,"err_out":err_out[:200] if err_out else None},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         session.close()
         transport.close()
         if err_out and not is_benign_stderr(err_out):
             return False, err_out
         return True, output or err_out
     except Exception as e:
+        # #region agent log
+        try:
+            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                import json
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H11","location":"check_rack_status.py:511","message":"key mode exception","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":int(time.time()*1000)}) + '\n')
+        except: pass
+        # #endregion
         return False, str(e)
 
 
