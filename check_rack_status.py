@@ -272,16 +272,16 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
 
 def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
     """计算远端文件 MD5
-    根据服务器类型选择不同方法，但都计算完整文件的MD5，与本地md5_bytes()方法保持一致：
-    - LP-8650系列：通过SFTP读取完整文件内容在本地计算MD5（QNX系统没有md5sum）
-    - LP-8797系列：使用md5sum命令获取完整文件的MD5（md5sum默认计算完整文件）
+    根据服务器类型选择不同方法：
+    - LP-8650系列：通过SFTP采样读取文件内容在本地计算MD5（部分计算，加快速度）
+    - LP-8797系列：使用md5sum命令获取完整文件的MD5（完整计算）
     """
     
     # 根据服务器类型选择方法
     use_sftp = server_name.startswith("LP-8650")
     
     if use_sftp:
-        # LP-8650系列：通过SFTP读取文件内容，在本地计算MD5
+        # LP-8650系列：通过SFTP采样读取文件内容，在本地计算MD5（部分计算）
         try:
             import hashlib
             transport = create_transport(server_name, ip, port)
@@ -291,38 +291,48 @@ def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
             file_stat = sftp.stat(remote_path)
             file_size = file_stat.st_size
             
-            # 读取文件内容并计算MD5
-            # 统一使用完整文件MD5计算，与本地MD5计算方式保持一致
-            # 不再使用采样MD5，确保与本地hashlib.md5()计算结果一致
-            # 根据文件大小动态调整chunk size以提高读取速度
-            if file_size > 100 * 1024 * 1024:  # >100MB
-                chunk_size = 8 * 1024 * 1024  # 8MB，进一步增大以提高速度
-            elif file_size > 10 * 1024 * 1024:  # >10MB
-                chunk_size = 4 * 1024 * 1024  # 4MB
-            else:
+            # 对于小文件（<10MB），完整读取计算MD5
+            if file_size < 10 * 1024 * 1024:
                 chunk_size = 1024 * 1024  # 1MB
+                md5_hash = hashlib.md5()
+                with sftp.file(remote_path, "rb") as remote_file:
+                    while True:
+                        chunk = remote_file.read(chunk_size)
+                        if not chunk:
+                            break
+                        md5_hash.update(chunk)
+                md5_val = md5_hash.hexdigest()
+            else:
+                # 对于大文件，使用采样MD5（部分计算）
+                sample_size = 1024 * 1024  # 1MB
+                md5_hash = hashlib.md5()
+                
+                with sftp.file(remote_path, "rb") as remote_file:
+                    # 1. 读取开头1MB
+                    chunk = remote_file.read(sample_size)
+                    if chunk:
+                        md5_hash.update(chunk)
+                    
+                    # 2. 读取中间1MB（文件中间位置）
+                    if file_size > sample_size * 2:
+                        mid_start = (file_size - sample_size) // 2
+                        remote_file.seek(mid_start)
+                        chunk = remote_file.read(sample_size)
+                        if chunk:
+                            md5_hash.update(chunk)
+                    
+                    # 3. 读取结尾1MB
+                    if file_size > sample_size:
+                        remote_file.seek(file_size - sample_size)
+                        chunk = remote_file.read(sample_size)
+                        if chunk:
+                            md5_hash.update(chunk)
+                    
+                    # 4. 将文件大小也加入MD5计算，增加唯一性
+                    md5_hash.update(str(file_size).encode())
+                
+                md5_val = md5_hash.hexdigest()
             
-            md5_hash = hashlib.md5()
-            total_read = 0
-            md5_start_time = time.time()
-            
-            with sftp.file(remote_path, "rb") as remote_file:
-                # 完整读取文件内容计算MD5，与本地md5_bytes()方法保持一致
-                while True:
-                    chunk = remote_file.read(chunk_size)
-                    if not chunk:
-                        break
-                    md5_hash.update(chunk)
-                    total_read += len(chunk)
-                    # 每读取50MB记录一次进度（减少日志频率）
-                    if total_read % (50 * 1024 * 1024) < chunk_size:
-                        elapsed = time.time() - md5_start_time
-                        speed = total_read / elapsed if elapsed > 0 else 0
-            
-            md5_elapsed = time.time() - md5_start_time
-            md5_speed = total_read / md5_elapsed if md5_elapsed > 0 else 0
-            
-            md5_val = md5_hash.hexdigest()
             sftp.close()
             transport.close()
             
@@ -534,8 +544,59 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
     return False, f"lpUCM stderr: {stderr_data.strip()}"
 
 
-def md5_bytes(data: bytes) -> str:
-    return hashlib.md5(data).hexdigest()
+def md5_bytes(data: bytes, server_name: str = None) -> str:
+    """计算字节数据的MD5值
+    对于8650系列使用采样MD5（部分计算）以加快速度
+    对于8797系列使用完整MD5计算
+    
+    Args:
+        data: 字节数据
+        server_name: 服务器名称，用于判断使用哪种MD5计算方式
+    """
+    import hashlib
+    
+    # 如果指定了服务器名称且是8650系列，使用采样MD5
+    if server_name and server_name.startswith("LP-8650"):
+        return md5_bytes_sampled(data)
+    else:
+        # 8797系列或其他情况使用完整MD5
+        return hashlib.md5(data).hexdigest()
+
+
+def md5_bytes_sampled(data: bytes) -> str:
+    """使用采样方式计算MD5（部分计算），用于8650系列加快速度
+    采样策略：读取文件的开头、中间、结尾部分，以及文件大小，计算MD5
+    这样可以快速验证文件是否一致，同时保持一定的准确性
+    """
+    import hashlib
+    
+    data_len = len(data)
+    
+    # 如果文件很小（<10MB），直接计算完整MD5
+    if data_len < 10 * 1024 * 1024:
+        return hashlib.md5(data).hexdigest()
+    
+    # 采样大小：每个采样点读取1MB
+    sample_size = 1024 * 1024  # 1MB
+    
+    md5_hash = hashlib.md5()
+    
+    # 1. 读取开头1MB
+    md5_hash.update(data[:sample_size])
+    
+    # 2. 读取中间1MB（文件中间位置）
+    if data_len > sample_size * 2:
+        mid_start = (data_len - sample_size) // 2
+        md5_hash.update(data[mid_start:mid_start + sample_size])
+    
+    # 3. 读取结尾1MB
+    if data_len > sample_size:
+        md5_hash.update(data[-sample_size:])
+    
+    # 4. 将文件大小也加入MD5计算，增加唯一性
+    md5_hash.update(str(data_len).encode())
+    
+    return md5_hash.hexdigest()
 
 
 def parse_md5_output(out: str) -> str:

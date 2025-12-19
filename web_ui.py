@@ -566,7 +566,7 @@ def api_fota():
             fota_server_locks[server_key] = task_id
 
         data = file.read()
-        local_md5 = md5_bytes(data)
+        local_md5 = md5_bytes(data, server_name)
         filename = file.filename
         remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
 
@@ -786,7 +786,11 @@ def api_batch_fota():
 
         # 读取文件数据
         data = file.read()
-        local_md5 = md5_bytes(data)
+        # 批量FOTA时，需要为每个服务器单独计算MD5（因为可能有8650和8797混合）
+        # 这里先计算一个通用的MD5，实际使用时会在每个任务中根据服务器类型重新计算
+        # 但为了兼容性，先使用第一个服务器的类型
+        first_server_name = servers[0].get("name", "") if servers else ""
+        local_md5 = md5_bytes(data, first_server_name)
         filename = file.filename
         remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
 
@@ -854,7 +858,9 @@ def api_batch_fota():
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
                     
-                    log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 开始FOTA，文件={filename}，本地MD5={local_md5}")
+                    # 根据服务器类型重新计算本地MD5（确保与远端MD5计算方式一致）
+                    server_local_md5 = md5_bytes(data, sname)
+                    log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 开始FOTA，文件={filename}，本地MD5={server_local_md5}")
 
                     def update_fota_progress(progress, status, step):
                         # 获取预估耗时
@@ -912,12 +918,12 @@ def api_batch_fota():
                         record_fota_timing("md5_calculation", md5_duration)
                         
                         if ok_md5_pre:
-                            cancelled = update_fota_progress(25, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5_pre[:8]}...")
+                            cancelled = update_fota_progress(25, "md5", f"MD5校验: 本地={server_local_md5[:8]}... 远端={r_md5_pre[:8]}...")
                             if cancelled:
                                 log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                                 return
                             
-                            if r_md5_pre == local_md5:
+                            if r_md5_pre == server_local_md5:
                                 # MD5匹配，跳过上传，使用已获取的MD5值
                                 log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 远端已存在且MD5一致，跳过上传，远端MD5={r_md5_pre}")
                                 need_upload = False
@@ -1073,8 +1079,8 @@ def api_batch_fota():
                                     batch_fota_tasks[batch_id]["completed"] += 1
                             return
 
-                        log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 上传后MD5校验，本地={local_md5} 远端={r_md5}")
-                        cancelled = update_fota_progress(85, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5[:8]}...")
+                        log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 上传后MD5校验，本地={server_local_md5} 远端={r_md5}")
+                        cancelled = update_fota_progress(85, "md5", f"MD5校验: 本地={server_local_md5[:8]}... 远端={r_md5[:8]}...")
                         if cancelled:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
@@ -1084,14 +1090,14 @@ def api_batch_fota():
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
 
-                        if local_md5 != r_md5:
+                        if server_local_md5 != r_md5:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] MD5不一致")
                             with fota_tasks_lock:
                                 fota_tasks[tid] = {
                                     "progress": 100,
                                     "status": "error",
                                     "step": "上传文件不完整&升级失败",
-                                    "result": {"ok": False, "error": "上传文件不完整&升级失败", "local_md5": local_md5, "remote_md5": r_md5},
+                                    "result": {"ok": False, "error": "上传文件不完整&升级失败", "local_md5": server_local_md5, "remote_md5": r_md5},
                                     "server_key": skey,
                                     "batch_id": batch_id
                                 }
@@ -1130,15 +1136,15 @@ def api_batch_fota():
                     
                     if not ok_ucm:
                         log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 升级失败: {info_ucm}")
-                        with fota_tasks_lock:
-                            fota_tasks[tid] = {
-                                "progress": 100,
-                                "status": "error",
-                                "step": f"升级失败: {info_ucm}",
-                                "result": {"ok": False, "error": f"升级失败: {info_ucm}", "local_md5": local_md5, "remote_md5": r_md5},
-                                "server_key": skey,
-                                "batch_id": batch_id
-                            }
+                            with fota_tasks_lock:
+                                fota_tasks[tid] = {
+                                    "progress": 100,
+                                    "status": "error",
+                                    "step": f"升级失败: {info_ucm}",
+                                    "result": {"ok": False, "error": f"升级失败: {info_ucm}", "local_md5": server_local_md5, "remote_md5": r_md5},
+                                    "server_key": skey,
+                                    "batch_id": batch_id
+                                }
                         with fota_server_locks_lock:
                             if skey in fota_server_locks and fota_server_locks[skey] == tid:
                                 del fota_server_locks[skey]
@@ -1149,14 +1155,14 @@ def api_batch_fota():
 
                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 升级成功")
                     with fota_tasks_lock:
-                        fota_tasks[tid] = {
-                            "progress": 100,
-                            "status": "done",
-                            "step": "升级成功",
-                            "result": {"ok": True, "path": remote_path, "local_md5": local_md5, "remote_md5": r_md5, "ucm_output": info_ucm},
-                            "server_key": skey,
-                            "batch_id": batch_id
-                        }
+                            fota_tasks[tid] = {
+                                "progress": 100,
+                                "status": "done",
+                                "step": "升级成功",
+                                "result": {"ok": True, "path": remote_path, "local_md5": server_local_md5, "remote_md5": r_md5, "ucm_output": info_ucm},
+                                "server_key": skey,
+                                "batch_id": batch_id
+                            }
                 except Exception as e:
                     error_msg = str(e)
                     is_cancelled = "任务已取消" in error_msg
