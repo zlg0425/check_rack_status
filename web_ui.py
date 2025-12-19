@@ -1136,15 +1136,15 @@ def api_batch_fota():
                     
                     if not ok_ucm:
                         log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 升级失败: {info_ucm}")
-                            with fota_tasks_lock:
-                                fota_tasks[tid] = {
-                                    "progress": 100,
-                                    "status": "error",
-                                    "step": f"升级失败: {info_ucm}",
-                                    "result": {"ok": False, "error": f"升级失败: {info_ucm}", "local_md5": server_local_md5, "remote_md5": r_md5},
-                                    "server_key": skey,
-                                    "batch_id": batch_id
-                                }
+                        with fota_tasks_lock:
+                            fota_tasks[tid] = {
+                                "progress": 100,
+                                "status": "error",
+                                "step": f"升级失败: {info_ucm}",
+                                "result": {"ok": False, "error": f"升级失败: {info_ucm}", "local_md5": server_local_md5, "remote_md5": r_md5},
+                                "server_key": skey,
+                                "batch_id": batch_id
+                            }
                         with fota_server_locks_lock:
                             if skey in fota_server_locks and fota_server_locks[skey] == tid:
                                 del fota_server_locks[skey]

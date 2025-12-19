@@ -1,0 +1,1368 @@
+Could not chdir to home directory /root: No such file or directory
+[m[0;32;32m2024-10-01 13:51:46.291|I|2248853|lpHids [idslib] [module_process] 0013 --- abnormal_proc_alarm_callback >>> [info] debug>>process alarm [sh -c LD_LIBRARY_PATH=/opt/usr/lib:/opt/usr/lib64 /opt/usr/bin/logview -w | /ifs/bin/grep UCM]
+[m[0;32;32m2024-10-01 13:51:46.695|I|2248853|lpHids [idslib] [module_process] 0013 --- abnormal_proc_alarm_callback >>> [info] debug>>process alarm [/ifs/bin/grep UCM]
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [fds.cpp:FDS_printVerInfo:64] Compiled on: Nov 25 2025 at 05:11:53
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [fds.cpp:FDS_printVerInfo:66] ********************VERSION*******************
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [fds.cpp:FDS_printVerInfo:67] Branch     : 
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [fds.cpp:FDS_printVerInfo:68] Commit Hash: 76d79c5d3b6493c60600d043289aee2226e35ed3
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [fds.cpp:FDS_printVerInfo:69] Commit Time: 2025-11-24 20:17:07 +0800
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [fds.cpp:FDS_printVerInfo:70] **********************************************
+[m[0;32;32m2024-10-01 13:51:48.450|I|206381237|lpUCM [8295_handler.c:FDS_idhGetDescTable:64] descTable is 213e5e68a0, g_idhTbl is 3a48c49380, size = 9
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:28] [bc_Init] Starting interopt_select_os
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:30] [bc_Init] Completed interopt_select_os
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:32] [bc_Init] Starting drvr_select_devb
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:34] [bc_Init] Completed drvr_select_devb
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:36] [bc_Init] Starting drvr_select_swdl_lun
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:38] [bc_Init] Completed drvr_select_swdl_lun
+[m[1;33m2024-10-01 13:51:48.450|W|206381237|lpUCM [bootChain.c:FDS_bcInit:40] [bc_Init] Starting swdl_init
+[m[1;33m2024-10-01 13:51:48.461|W|206381237|lpUCM [bootChain.c:FDS_bcInit:47] swdl_utils: WARN swdl misc checksum fail, err=26
+[m[1;33m2024-10-01 13:51:48.461|W|206381237|lpUCM [bootChain.c:FDS_bcInit:55] [bc_Init] Completed swdl_init
+[m[0;32;32m2024-10-01 13:51:48.461|I|206381237|lpUCM [fds.cpp:main:99] start upgrade by local file: /opt/data/fota/LP-ICHS046-AA_V1.04.0002_D_20251202.icsw
+[m[0;32;32m2024-10-01 13:51:48.461|I|206381237|lpUCM [upa.c:FDS_upaSetSilenceMode:236] FDS_upaSetSilenceMode
+[m[0;32;32m2024-10-01 13:51:48.461|I|206381237|lpUCM IpcKeyValueClient construct
+[m[1;33m2024-10-01 13:51:48.473|W|206381237|lpUCM IpcClientChannel open suc, retries: 0 
+[m[0;32;32m2024-10-01 13:51:48.473|I|206381237|lpUCM IpcKeyValueClient::init ipcclient suc
+[m[0;32;32m2024-10-01 13:51:48.473|I|206381237|lpUCM DbKeyValueStorage construct.
+[m[0;32;32m2024-10-01 13:51:48.474|I|206381237|lpUCM DbKeyValueStorage::Init filename:/opt/data/config/appData.db, filebackname:/opt/data/config/appData.dbbak
+[m[0;32;31m2024-10-01 13:51:48.478|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;31m2024-10-01 13:51:48.479|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;32m2024-10-01 13:51:48.479|I|206381237|lpUCM DbKeyValueStorage init succ.
+[m[0;32;32m2024-10-01 13:51:48.479|I|206381237|lpUCM db backup thread begin.
+[m[0;32;32m2024-10-01 13:51:48.480|I|206381237|lpUCM PER_storageCreate create success
+[m[1;33m2024-10-01 13:51:48.480|W|1548381|lpPer DbAdapter::SetValue setvalue key: CAL_NOFEELUP_VALIDFLAG, value: 0x00 , authority: lpUCM
+[m[0;32;32m2024-10-01 13:51:48.482|I|206381237|lpUCM IpcKeyValueClient deconstruct
+[m[0;32;32m2024-10-01 13:51:49.480|I|206381237|lpUCM db backup thread end.
+[m[0;32;32m2024-10-01 13:51:49.480|I|206381237|lpUCM DbKeyValueStorage deconstruct.
+[m[0;32;32m2024-10-01 13:51:49.480|I|206381237|lpUCM PerClient deconstruct
+[m[0;32;32m2024-10-01 13:51:49.480|I|206381237|lpUCM [file.c:FDS_fileMkDir:274] Directory /opt/data/fota/ already exists
+[m[0;32;31m2024-10-01 13:51:49.481|E|206381237|lpUCM [img.c:FDS_imgGetVal:37] [scripts] FDS_cfgGetSubNodeByName fail 
+[m[1;33m2024-10-01 13:51:49.481|W|206381237|lpUCM [dum.c:FDS_dumConvertSwtchAB:151] STUB !!!
+[m[0;32;32m2024-10-01 13:51:49.481|I|206381237|lpUCM [scm.c:FDS_scmOnHandleFile:926] offset:8868
+[m[1;33m2024-10-01 13:51:49.481|W|206381237|lpUCM [dum.c:FDS_dumGetProduct:98] STUB !!!
+[m[1;33m2024-10-01 13:51:49.481|W|206381237|lpUCM [dum.c:FDS_dumGetProduct:141] product:LP-ICHS046-AA
+[m[0;32;32m2024-10-01 13:51:49.481|I|206381237|lpUCM IpcKeyValueClient construct
+[m[1;33m2024-10-01 13:51:49.481|W|206381237|lpUCM IpcClientChannel open suc, retries: 0 
+[m[0;32;32m2024-10-01 13:51:49.481|I|206381237|lpUCM IpcKeyValueClient::init ipcclient suc
+[m[0;32;32m2024-10-01 13:51:49.481|I|206381237|lpUCM DbKeyValueStorage construct.
+[m[0;32;32m2024-10-01 13:51:49.482|I|206381237|lpUCM DbKeyValueStorage::Init filename:/opt/data/config/appData.db, filebackname:/opt/data/config/appData.dbbak
+[m[0;32;31m2024-10-01 13:51:49.484|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;31m2024-10-01 13:51:49.484|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;32m2024-10-01 13:51:49.484|I|206381237|lpUCM db backup thread begin.
+[m[0;32;32m2024-10-01 13:51:49.484|I|206381237|lpUCM DbKeyValueStorage init succ.
+[m[0;32;32m2024-10-01 13:51:49.484|I|206381237|lpUCM PER_storageCreate create success
+[m[0;32;32m2024-10-01 13:51:49.485|I|206381237|lpUCM [upa.c:FDS_upaCmpSwVersion:51] FDS_upaCmpSwVersion throuth pia 1.03.0002
+[m[1;33m2024-10-01 13:51:49.485|W|206381237|lpUCM [upa.c:FDS_upaCmpSwVersion:64] packect_version 1.04.0002 curversion 1.03.0002 
+[m[0;32;32m2024-10-01 13:51:49.485|I|206381237|lpUCM IpcKeyValueClient deconstruct
+[m[0;32;32m2024-10-01 13:51:50.485|I|206381237|lpUCM db backup thread end.
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM DbKeyValueStorage deconstruct.
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM PerClient deconstruct
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x3b5
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0x3b5, V:10530dfdc4
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x29d
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x101
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0x29d, V:10530dfdc8
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [1] T:0x30, L:0xd, V:10530e0067
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [2] T:0x03, L:0x101, V:10530e0078
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x81, bytes:1, length:0x93
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x122
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0xa0, L:0x3, V:10530dfdca
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [1] T:0x02, L:0x6, V:10530dfdcf
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [2] T:0x30, L:0xd, V:10530dfdd7
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [3] T:0x30, L:0x6f, V:10530dfde6
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [4] T:0x30, L:0x1e, V:10530dfe57
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [5] T:0x30, L:0x93, V:10530dfe78
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [6] T:0x30, L:0x122, V:10530dff0f
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [verify.c:FDS_verifyX509Certificate:155] signature length:51
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0x31, V:213e5e504a
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0xd, V:213e5e504c
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [1] T:0x04, L:0x20, V:213e5e505b
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmGetHashFromSignature:131] outSize:32
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmCalcCertSha256:175] size:32
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [verify.c:FDS_verifyX509Certificate:179] x509 certificate pass
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x10f
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0xd, V:10530dff11
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [1] T:0x03, L:0x10f, V:10530dff22
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmGetX509SubjectPublicKey:307] validBuffSize: 0x10e
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x10a
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0x10a, V:213e5e424c
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseValueLength:397] first:0x82, bytes:2, length:0x101
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x02, L:0x101, V:213e5e4250
+[m[0;32;32m2024-10-01 13:51:50.486|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [1] T:0x02, L:0x3, V:213e5e4353
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0x31, V:213e5e504a
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [0] T:0x30, L:0xd, V:213e5e504c
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [csm.c:FDS_csmX509ParseBreadth:462] [1] T:0x04, L:0x20, V:213e5e505b
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [csm.c:FDS_csmGetHashFromSignature:131] outSize:32
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [verify.c:FDS_verifyFirmwareSignature:242] firmware signature pass!!!
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [verify.c:FDS_verifyFirmwareHash:258] descFileName:/opt/data/fota/sw-description
+[m[1;33m2024-10-01 13:51:50.487|W|206381237|lpUCM [verify.c:FDS_verifyFirmwareHash:303] sw-description verify success !!!
+[m[1;33m2024-10-01 13:51:50.487|W|206381237|lpUCM [verify.c:FDS_verifyContext:355] verify context success !!!
+[m[0;32;32m2024-10-01 13:51:50.487|I|206381237|lpUCM [scm.c:FDS_scmOnHandleFile:936] offset:8868
+[m[1;33m2024-10-01 13:51:50.488|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] cpucp.elf.rawgz:28731, find
+[m[1;33m2024-10-01 13:51:50.488|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] BTFM.bin.rawgz:458079, find
+[m[1;33m2024-10-01 13:51:50.490|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] dspso.bin.rawgz:10827467, find
+[m[1;33m2024-10-01 13:51:50.566|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] NON-HLOS.bin.rawgz:16570570, find
+[m[1;33m2024-10-01 13:51:50.682|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] xbl.elf.rawgz:2516797, find
+[m[1;33m2024-10-01 13:51:50.700|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] xbl_back.elf.rawgz:2516802, find
+[m[1;33m2024-10-01 13:51:50.717|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] xbl_config.elf.rawgz:19142, find
+[m[1;33m2024-10-01 13:51:50.717|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] aop.mbn.rawgz:95764, find
+[m[1;33m2024-10-01 13:51:50.718|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] tz.mbn.rawgz:1539064, find
+[m[1;33m2024-10-01 13:51:50.728|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] abl_fastboot.elf.rawgz:82320, find
+[m[1;33m2024-10-01 13:51:50.728|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] host_vbmeta_la.bin.rawgz:2805, find
+[m[1;33m2024-10-01 13:51:50.729|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] smss.elf.rawgz:116927, find
+[m[1;33m2024-10-01 13:51:50.730|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] boot_la.bin.rawgz:2121145, find
+[m[1;33m2024-10-01 13:51:50.743|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] devcfg_auto.mbn.rawgz:19712, find
+[m[1;33m2024-10-01 13:51:50.743|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] multi_image.mbn.rawgz:2213, find
+[m[1;33m2024-10-01 13:51:50.743|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] imagefv.elf.rawgz:9028, find
+[m[1;33m2024-10-01 13:51:50.744|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] shrm.elf.rawgz:21383, find
+[m[1;33m2024-10-01 13:51:50.744|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] mifs_hyp_la.ifs.sign.gz:2478859, find
+[m[1;33m2024-10-01 13:51:50.760|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] oem.xfs.gz:449069339, find
+[m[1;33m2024-10-01 13:51:53.748|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] system.xfs.gz:311569343, find
+[m[1;33m2024-10-01 13:51:55.762|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] ifs2_la.ifs.gz:83963138, find
+[m[1;33m2024-10-01 13:51:56.312|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] boot.bin.rawgz:29122878, find
+[m[1;33m2024-10-01 13:51:56.505|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] vendor_boot.bin.rawgz:600043, find
+[m[1;33m2024-10-01 13:51:56.508|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] super.android.gz:4177999898, find
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] vbmeta.bin.rawgz:2741, find
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] fw_config_9071CL_VB.bin.rawgz:63649, find
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:395] fw_config_9068CL_VB.bin.rawgz:63379, find
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [scm.c:FDS_scmScanAndVerify:388] cpio end !!!
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [1] fname: cpucp.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	offset: 8996,size:28731
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [2] fname: BTFM.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	offset: 37856,size:458079
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM [3] fname: dspso.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	offset: 496064,size:10827467
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.568|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [4] fname: NON-HLOS.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 11323664,size:16570570
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [5] fname: xbl.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 27894360,size:2516797
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [6] fname: xbl_back.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 30411292,size:2516802
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [7] fname: xbl_config.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 32928228,size:19142
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [8] fname: aop.mbn.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 32947496,size:95764
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [9] fname: tz.mbn.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 33043384,size:1539064
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [10] fname: abl_fastboot.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 34582584,size:82320
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [11] fname: host_vbmeta_la.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 34665040,size:2805
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [12] fname: smss.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 34667976,size:116927
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [13] fname: boot_la.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 34785032,size:2121145
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [14] fname: devcfg_auto.mbn.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 36906312,size:19712
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [15] fname: multi_image.mbn.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 36926156,size:2213
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [16] fname: imagefv.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 36928500,size:9028
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [17] fname: shrm.elf.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 36937656,size:21383
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [18] fname: mifs_hyp_la.ifs.sign.gz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 36959176,size:2478859
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [19] fname: oem.xfs.gz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 39438160,size:449069339
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [20] fname: system.xfs.gz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 488507624,size:311569343
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [21] fname: ifs2_la.ifs.gz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 800077096,size:83963138
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [22] fname: boot.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 884040364,size:29122878
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM [23] fname: vendor_boot.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	offset: 913163376,size:600043
+[m[1;33m2024-10-01 13:52:23.569|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM [24] fname: super.android.gz
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	offset: 913763548,size:4177999898
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM [25] fname: vbmeta.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	offset: 5091763576,size:2741
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	handlerName: raw
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	installedPath: /
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM [26] fname: fw_config_9071CL_VB.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	offset: 5091766460,size:63649
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	handlerName: switch
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	installedPath: /opt/data/fota/fw_config_9071CL_VB.bin
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM [27] fname: fw_config_9068CL_VB.bin.rawgz
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	provided: 1, compress:2
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	offset: 5091830252,size:63379
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	checksum: 0
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	handlerName: switch
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 	installedPath: /opt/data/fota/fw_config_9068CL_VB.bin
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM seek: 0 splits: 0 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM 
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM [bootChain.c:FDS_bcDiskCorrection:119] diskpart  is no label
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM [bootChain.c:FDS_bcDiskCorrection:119] diskpart  is no label
+[m[0;32;32m2024-10-01 13:52:23.570|I|206381237|lpUCM [scm.c:FDS_scmSaveTmpVersion:823] switchAB:1,
+[m[0;32;32m2024-10-01 13:52:23.570|I|206381237|lpUCM [upa.c:FDS_upaWriteTemporaryVersion:271] FDS_upaWriteTemporaryVersion
+[m[0;32;32m2024-10-01 13:52:23.570|I|206381237|lpUCM IpcKeyValueClient construct
+[m[1;33m2024-10-01 13:52:23.570|W|206381237|lpUCM IpcClientChannel open suc, retries: 0 
+[m[0;32;32m2024-10-01 13:52:23.570|I|206381237|lpUCM IpcKeyValueClient::init ipcclient suc
+[m[0;32;32m2024-10-01 13:52:23.570|I|206381237|lpUCM DbKeyValueStorage construct.
+[m[0;32;32m2024-10-01 13:52:23.570|I|206381237|lpUCM DbKeyValueStorage::Init filename:/opt/data/config/appData.db, filebackname:/opt/data/config/appData.dbbak
+[m[0;32;31m2024-10-01 13:52:23.574|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;31m2024-10-01 13:52:23.574|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;32m2024-10-01 13:52:23.574|I|206381237|lpUCM db backup thread begin.
+[m[0;32;32m2024-10-01 13:52:23.574|I|206381237|lpUCM DbKeyValueStorage init succ.
+[m[0;32;32m2024-10-01 13:52:23.575|I|206381237|lpUCM PER_storageCreate create success
+[m[1;33m2024-10-01 13:52:23.575|W|1548381|lpPer DbAdapter::SetValue setvalue key: CAL_NOFEELUP_ECUSOFNUM, value: 0x31 2e 30 34 2e 30 30 30 32 00 , authority: lpUCM
+[m[1;33m2024-10-01 13:52:23.576|W|1548381|lpPer DbAdapter::SetValue setvalue key: CAL_NOFEELUP_SYSSOFNUM, value: 0x31 2e 30 34 2e 30 30 30 32 00 , authority: lpUCM
+[m[0;32;32m2024-10-01 13:52:23.577|I|206381237|lpUCM IpcKeyValueClient deconstruct
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM db backup thread end.
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM DbKeyValueStorage deconstruct.
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM PerClient deconstruct
+[m[1;33m2024-10-01 13:52:24.575|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [1st] deploy:cpucp.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:1, percent:0, rop:0%
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:24.575|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:24.576|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:1, percent:28, rop:1%
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:1, percent:50, rop:1%
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:1, percent:100, rop:3%
+[m[1;33m2024-10-01 13:52:24.578|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [1st] success:cpucp.elf.rawgz
+[m[1;33m2024-10-01 13:52:24.578|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [2st] deploy:BTFM.bin.rawgz
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:0, rop:3%
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:24.578|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:24.579|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:1, rop:3%
+[m[0;32;32m2024-10-01 13:52:24.579|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:3, rop:3%
+[m[0;32;32m2024-10-01 13:52:24.580|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:5, rop:3%
+[m[0;32;32m2024-10-01 13:52:24.581|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:7, rop:3%
+[m[0;32;32m2024-10-01 13:52:24.581|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:8, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.582|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:10, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.582|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:12, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.585|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:14, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.585|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:16, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.586|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:17, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.586|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:19, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.587|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:21, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.588|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:23, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.588|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:25, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.589|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:26, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.589|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:28, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.590|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:30, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.590|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:32, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.591|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:33, rop:4%
+[m[0;32;32m2024-10-01 13:52:24.591|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:35, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.592|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:37, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.593|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:39, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.593|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:41, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.594|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:42, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.594|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:44, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.595|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:46, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.595|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:48, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:50, rop:5%
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:2, percent:100, rop:7%
+[m[1;33m2024-10-01 13:52:24.596|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [2st] success:BTFM.bin.rawgz
+[m[1;33m2024-10-01 13:52:24.596|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [3st] deploy:dspso.bin.rawgz
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:0, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:24.596|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:24.662|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:1, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.672|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:2, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.681|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:3, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.688|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:4, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.696|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:5, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.711|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:6, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.718|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:7, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.725|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:8, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.731|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:9, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.738|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:10, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.744|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:11, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.752|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:12, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.786|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:13, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.799|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:14, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.807|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:15, rop:7%
+[m[0;32;32m2024-10-01 13:52:24.813|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:16, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.821|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:17, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.824|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:18, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.827|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:19, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.829|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:20, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.831|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:21, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.834|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:22, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.837|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:23, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.840|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:24, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.842|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:25, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.851|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:26, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.878|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:27, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.882|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:28, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.889|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:29, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.892|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:30, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.894|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:31, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.897|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:32, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.900|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:33, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.903|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:34, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.905|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:35, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.907|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:36, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.913|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:37, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.915|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:38, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.917|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:39, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.920|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:40, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.922|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:41, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.942|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:42, rop:8%
+[m[0;32;32m2024-10-01 13:52:24.944|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:43, rop:9%
+[m[0;32;32m2024-10-01 13:52:24.955|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:44, rop:9%
+[m[0;32;32m2024-10-01 13:52:24.957|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:45, rop:9%
+[m[0;32;32m2024-10-01 13:52:24.960|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:46, rop:9%
+[m[0;32;32m2024-10-01 13:52:24.967|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:47, rop:9%
+[m[0;32;32m2024-10-01 13:52:24.974|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:48, rop:9%
+[m[0;32;32m2024-10-01 13:52:24.982|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:49, rop:9%
+[m[0;32;32m2024-10-01 13:52:25.630|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:50, rop:9%
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:3, percent:100, rop:11%
+[m[1;33m2024-10-01 13:52:25.895|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [3st] success:dspso.bin.rawgz
+[m[1;33m2024-10-01 13:52:25.895|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [4st] deploy:NON-HLOS.bin.rawgz
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:0, rop:11%
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:25.895|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:25.932|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:1, rop:11%
+[m[0;32;32m2024-10-01 13:52:25.943|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:2, rop:11%
+[m[0;32;32m2024-10-01 13:52:25.982|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:3, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.4|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:4, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.17|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:5, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.28|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:6, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.38|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:7, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.48|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:8, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.58|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:9, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.71|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:10, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.108|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:11, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.139|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:12, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.160|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:13, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.211|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:14, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.251|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:15, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.261|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:16, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.272|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:17, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.283|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:18, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.294|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:19, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.304|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:20, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.329|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:21, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.359|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:22, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.409|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:23, rop:11%
+[m[0;32;32m2024-10-01 13:52:26.454|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:24, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.469|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:25, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.480|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:26, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.501|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:27, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.512|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:28, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.523|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:29, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.579|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:30, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.595|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:31, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.607|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:32, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.620|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:33, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.632|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:34, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.643|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:35, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.677|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:36, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.724|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:37, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.737|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:38, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.747|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:39, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.760|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:40, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.770|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:41, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.780|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:42, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.791|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:43, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.804|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:44, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.869|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:45, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.897|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:46, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.906|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:47, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.916|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:48, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.975|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:49, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.986|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:50, rop:12%
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:4, percent:100, rop:14%
+[m[1;33m2024-10-01 13:52:26.987|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [4st] success:NON-HLOS.bin.rawgz
+[m[1;33m2024-10-01 13:52:26.987|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [5st] deploy:xbl.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:0, rop:14%
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:26.987|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:26.993|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:1, rop:14%
+[m[0;32;32m2024-10-01 13:52:26.995|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:2, rop:14%
+[m[0;32;32m2024-10-01 13:52:26.996|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:3, rop:14%
+[m[0;32;32m2024-10-01 13:52:26.998|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:4, rop:14%
+[m[0;32;32m2024-10-01 13:52:26.999|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:5, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.1|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:6, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.3|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:7, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.4|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:8, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.6|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:9, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.7|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:10, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.7|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:11, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.8|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:12, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.9|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:13, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.10|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:14, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.11|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:15, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.12|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:16, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.13|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:17, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.14|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:18, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.15|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:19, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.15|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:20, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.17|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:21, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.17|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:22, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.18|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:23, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.19|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:24, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.19|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:25, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.20|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:26, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.21|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:27, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.22|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:28, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.24|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:29, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.28|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:30, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.29|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:31, rop:15%
+[m[0;32;32m2024-10-01 13:52:27.30|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:32, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.30|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:33, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.63|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:34, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.64|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:35, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.65|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:36, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.66|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:37, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.66|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:38, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.67|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:39, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.68|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:40, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.68|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:41, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.69|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:42, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.70|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:43, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.71|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:44, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.72|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:45, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.78|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:46, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.80|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:47, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.81|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:48, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.83|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:49, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:50, rop:16%
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:5, percent:100, rop:18%
+[m[1;33m2024-10-01 13:52:27.85|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [5st] success:xbl.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.85|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [6st] deploy:xbl_back.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:0, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.85|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.87|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:1, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.89|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:2, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.91|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:3, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.93|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:4, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.94|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:5, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.96|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:6, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.98|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:7, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.99|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:8, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.101|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:9, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.102|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:10, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.102|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:11, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.103|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:12, rop:18%
+[m[0;32;32m2024-10-01 13:52:27.104|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:13, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.105|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:14, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.106|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:15, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.107|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:16, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.108|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:17, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.109|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:18, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.110|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:19, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.110|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:20, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.111|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:21, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.112|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:22, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.113|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:23, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.113|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:24, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.114|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:25, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.115|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:26, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.115|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:27, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.116|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:28, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.117|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:29, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.118|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:30, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.118|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:31, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.120|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:32, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.120|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:33, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.121|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:34, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.122|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:35, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.123|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:36, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.123|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:37, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.124|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:38, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.153|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:39, rop:19%
+[m[0;32;32m2024-10-01 13:52:27.153|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:40, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.154|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:41, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.155|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:42, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.156|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:43, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.157|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:44, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.158|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:45, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.164|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:46, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.167|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:47, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.168|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:48, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.170|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:49, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:50, rop:20%
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:6, percent:100, rop:22%
+[m[1;33m2024-10-01 13:52:27.172|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [6st] success:xbl_back.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.172|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [7st] deploy:xbl_config.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:7, percent:0, rop:22%
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.172|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:7, percent:42, rop:23%
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:7, percent:50, rop:24%
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:7, percent:100, rop:25%
+[m[1;33m2024-10-01 13:52:27.173|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [7st] success:xbl_config.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.173|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [8st] deploy:aop.mbn.rawgz
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:0, rop:25%
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.173|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.174|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:8, rop:26%
+[m[0;32;32m2024-10-01 13:52:27.174|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:17, rop:26%
+[m[0;32;32m2024-10-01 13:52:27.175|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:25, rop:26%
+[m[0;32;32m2024-10-01 13:52:27.175|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:34, rop:27%
+[m[0;32;32m2024-10-01 13:52:27.176|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:42, rop:27%
+[m[0;32;32m2024-10-01 13:52:27.177|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:50, rop:27%
+[m[0;32;32m2024-10-01 13:52:27.177|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.177|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:8, percent:100, rop:29%
+[m[1;33m2024-10-01 13:52:27.177|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [8st] success:aop.mbn.rawgz
+[m[1;33m2024-10-01 13:52:27.177|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [9st] deploy:tz.mbn.rawgz
+[m[0;32;32m2024-10-01 13:52:27.177|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:0, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.178|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.178|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.178|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.178|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.178|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:1, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.180|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:2, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.182|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:3, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.184|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:4, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.184|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:5, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.186|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:6, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.187|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:7, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.188|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:8, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.189|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:9, rop:29%
+[m[0;32;32m2024-10-01 13:52:27.190|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:10, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.191|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:11, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.192|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:12, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.193|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:13, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.195|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:14, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.196|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:15, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.197|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:16, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.197|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:17, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.199|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:18, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.200|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:19, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.201|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:20, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.202|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:21, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.204|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:22, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.206|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:23, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.214|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:24, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.216|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:25, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.219|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:26, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.220|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:27, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.221|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:28, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.223|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:29, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.224|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:30, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.225|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:31, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.226|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:32, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.227|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:33, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.228|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:34, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.229|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:35, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.231|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:36, rop:30%
+[m[0;32;32m2024-10-01 13:52:27.232|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:37, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.245|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:38, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.260|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:39, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.264|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:40, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.266|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:41, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.267|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:42, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.268|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:43, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.270|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:44, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.271|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:45, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.275|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:46, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.276|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:47, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.277|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:48, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.278|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:49, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:50, rop:31%
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:9, percent:100, rop:33%
+[m[1;33m2024-10-01 13:52:27.280|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [9st] success:tz.mbn.rawgz
+[m[1;33m2024-10-01 13:52:27.280|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [10st] deploy:abl_fastboot.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:0, rop:33%
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.280|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.281|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:9, rop:33%
+[m[0;32;32m2024-10-01 13:52:27.281|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:19, rop:34%
+[m[0;32;32m2024-10-01 13:52:27.281|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:29, rop:34%
+[m[0;32;32m2024-10-01 13:52:27.282|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:39, rop:34%
+[m[0;32;32m2024-10-01 13:52:27.282|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:49, rop:35%
+[m[0;32;32m2024-10-01 13:52:27.282|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:50, rop:35%
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:10, percent:100, rop:37%
+[m[1;33m2024-10-01 13:52:27.283|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [10st] success:abl_fastboot.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.283|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [11st] deploy:host_vbmeta_la.bin.rawgz
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:11, percent:0, rop:37%
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:11, percent:50, rop:38%
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:11, percent:100, rop:40%
+[m[1;33m2024-10-01 13:52:27.283|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [11st] success:host_vbmeta_la.bin.rawgz
+[m[1;33m2024-10-01 13:52:27.283|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [12st] deploy:smss.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:0, rop:40%
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.283|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.284|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:7, rop:41%
+[m[0;32;32m2024-10-01 13:52:27.284|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:14, rop:41%
+[m[0;32;32m2024-10-01 13:52:27.285|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:21, rop:41%
+[m[0;32;32m2024-10-01 13:52:27.285|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:28, rop:41%
+[m[0;32;32m2024-10-01 13:52:27.286|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:35, rop:42%
+[m[0;32;32m2024-10-01 13:52:27.286|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:42, rop:42%
+[m[0;32;32m2024-10-01 13:52:27.290|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:49, rop:42%
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:50, rop:42%
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:12, percent:100, rop:44%
+[m[1;33m2024-10-01 13:52:27.291|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [12st] success:smss.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.291|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [13st] deploy:boot_la.bin.rawgz
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:0, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.291|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.292|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:1, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.293|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:2, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.294|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:3, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.294|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:4, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.295|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:5, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.296|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:6, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.297|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:7, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.298|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:8, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.299|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:9, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.299|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:10, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.299|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:11, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.301|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:12, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.301|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:13, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.302|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:14, rop:44%
+[m[0;32;32m2024-10-01 13:52:27.303|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:15, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.303|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:16, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.304|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:17, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.305|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:18, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.306|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:19, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.307|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:20, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.308|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:21, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.308|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:22, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.309|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:23, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.310|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:24, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.311|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:25, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.312|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:26, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.312|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:27, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.314|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:28, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.314|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:29, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.315|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:30, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.315|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:31, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.316|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:32, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.317|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:33, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.318|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:34, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.319|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:35, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.320|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:36, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.320|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:37, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.322|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:38, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.322|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:39, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.323|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:40, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.324|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:41, rop:45%
+[m[0;32;32m2024-10-01 13:52:27.325|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:42, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.341|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:43, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.342|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:44, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.343|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:45, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.344|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:46, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.344|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:47, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.345|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:48, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.346|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:49, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:50, rop:46%
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:13, percent:100, rop:48%
+[m[1;33m2024-10-01 13:52:27.347|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [13st] success:boot_la.bin.rawgz
+[m[1;33m2024-10-01 13:52:27.347|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [14st] deploy:devcfg_auto.mbn.rawgz
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:14, percent:0, rop:48%
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:14, percent:41, rop:49%
+[m[0;32;32m2024-10-01 13:52:27.347|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:14, percent:50, rop:50%
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:14, percent:100, rop:51%
+[m[1;33m2024-10-01 13:52:27.348|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [14st] success:devcfg_auto.mbn.rawgz
+[m[1;33m2024-10-01 13:52:27.348|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [15st] deploy:multi_image.mbn.rawgz
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:15, percent:0, rop:51%
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:15, percent:50, rop:53%
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:15, percent:100, rop:55%
+[m[1;33m2024-10-01 13:52:27.348|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [15st] success:multi_image.mbn.rawgz
+[m[1;33m2024-10-01 13:52:27.348|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [16st] deploy:imagefv.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:16, percent:0, rop:55%
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:16, percent:50, rop:57%
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:16, percent:100, rop:59%
+[m[1;33m2024-10-01 13:52:27.348|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [16st] success:imagefv.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.348|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [17st] deploy:shrm.elf.rawgz
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:17, percent:0, rop:59%
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.348|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:17, percent:38, rop:60%
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:17, percent:50, rop:61%
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:17, percent:100, rop:62%
+[m[1;33m2024-10-01 13:52:27.349|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [17st] success:shrm.elf.rawgz
+[m[1;33m2024-10-01 13:52:27.349|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [18st] deploy:mifs_hyp_la.ifs.sign.gz
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:0, rop:62%
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.349|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.352|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:1, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.353|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:2, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.358|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:3, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.360|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:4, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.362|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:5, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.364|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:6, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.366|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:7, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.367|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:8, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.377|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:9, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.379|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:10, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.380|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:11, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.383|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:12, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.386|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:13, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.388|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:14, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.390|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:15, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.392|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:16, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.394|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:17, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.396|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:18, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.398|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:19, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.399|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:20, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.401|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:21, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.403|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:22, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.405|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:23, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.407|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:24, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.409|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:25, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.411|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:26, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.412|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:27, rop:63%
+[m[0;32;32m2024-10-01 13:52:27.414|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:28, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.417|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:29, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.419|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:30, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.422|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:31, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.425|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:32, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.428|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:33, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.452|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:34, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.460|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:35, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.464|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:36, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.469|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:37, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.474|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:38, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.478|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:39, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.480|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:40, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.483|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:41, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.485|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:42, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.488|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:43, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.490|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:44, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.499|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:45, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.501|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:46, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.502|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:47, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.505|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:48, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.508|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:49, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:50, rop:64%
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:18, percent:100, rop:66%
+[m[1;33m2024-10-01 13:52:27.514|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [18st] success:mifs_hyp_la.ifs.sign.gz
+[m[1;33m2024-10-01 13:52:27.514|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [19st] deploy:oem.xfs.gz
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:0, rop:66%
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:52:27.514|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:52:27.969|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:1, rop:66%
+[m[0;32;32m2024-10-01 13:52:28.246|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:2, rop:66%
+[m[0;32;32m2024-10-01 13:52:28.531|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:3, rop:66%
+[m[0;32;32m2024-10-01 13:52:28.826|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:4, rop:66%
+[m[0;32;32m2024-10-01 13:52:29.112|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:5, rop:66%
+[m[0;32;32m2024-10-01 13:52:29.413|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:6, rop:66%
+[m[0;32;32m2024-10-01 13:52:29.721|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:7, rop:66%
+[m[0;32;32m2024-10-01 13:52:29.994|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:8, rop:66%
+[m[0;32;32m2024-10-01 13:52:30.407|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:9, rop:67%
+[m[0;32;32m2024-10-01 13:52:31.85|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:10, rop:67%
+[m[0;32;32m2024-10-01 13:52:31.716|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:11, rop:67%
+[m[0;32;32m2024-10-01 13:52:32.184|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:12, rop:67%
+[m[0;32;32m2024-10-01 13:52:32.854|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:13, rop:67%
+[m[0;32;32m2024-10-01 13:52:33.554|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:14, rop:67%
+[m[0;32;32m2024-10-01 13:52:34.196|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:15, rop:67%
+[m[0;32;32m2024-10-01 13:52:34.376|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:16, rop:67%
+[m[0;32;32m2024-10-01 13:52:34.620|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:17, rop:67%
+[m[0;32;32m2024-10-01 13:52:34.914|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:18, rop:67%
+[m[0;32;32m2024-10-01 13:52:35.696|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:19, rop:67%
+[m[0;32;32m2024-10-01 13:52:36.221|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:20, rop:67%
+[m[0;32;32m2024-10-01 13:52:36.762|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:21, rop:67%
+[m[0;32;32m2024-10-01 13:52:37.347|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:22, rop:67%
+[m[0;32;32m2024-10-01 13:52:37.958|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:23, rop:67%
+[m[0;32;32m2024-10-01 13:52:38.556|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:24, rop:67%
+[m[0;32;32m2024-10-01 13:52:39.236|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:25, rop:67%
+[m[0;32;32m2024-10-01 13:52:39.872|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:26, rop:67%
+[m[0;32;32m2024-10-01 13:52:40.539|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:27, rop:67%
+[m[0;32;32m2024-10-01 13:52:41.123|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:28, rop:67%
+[m[0;32;32m2024-10-01 13:52:41.773|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:29, rop:67%
+[m[0;32;32m2024-10-01 13:52:42.134|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:30, rop:67%
+[m[0;32;32m2024-10-01 13:52:42.394|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:31, rop:67%
+[m[0;32;32m2024-10-01 13:52:42.840|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:32, rop:67%
+[m[0;32;32m2024-10-01 13:52:43.318|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:33, rop:67%
+[m[0;32;32m2024-10-01 13:52:43.814|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:34, rop:67%
+[m[0;32;32m2024-10-01 13:52:44.145|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:35, rop:67%
+[m[0;32;32m2024-10-01 13:52:44.384|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:36, rop:68%
+[m[0;32;32m2024-10-01 13:52:44.697|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:37, rop:68%
+[m[0;32;32m2024-10-01 13:52:44.901|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:38, rop:68%
+[m[0;32;32m2024-10-01 13:52:45.209|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:39, rop:68%
+[m[0;32;32m2024-10-01 13:52:45.564|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:40, rop:68%
+[m[0;32;32m2024-10-01 13:52:45.822|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:41, rop:68%
+[m[0;32;32m2024-10-01 13:52:46.106|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:42, rop:68%
+[m[0;32;32m2024-10-01 13:52:46.395|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:43, rop:68%
+[m[0;32;32m2024-10-01 13:52:46.757|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:44, rop:68%
+[m[0;32;32m2024-10-01 13:52:47.59|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:45, rop:68%
+[m[0;32;31m2024-10-01 13:52:47.288|E|1921060|LpLoglpCluster 206381237               /opt/usr/bin/lpUCM   293   3%  29%   1672k   0%
+[m[0;32;32m2024-10-01 13:52:47.437|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:46, rop:68%
+[m[0;32;32m2024-10-01 13:52:47.767|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:47, rop:68%
+[m[0;32;32m2024-10-01 13:52:48.160|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:48, rop:68%
+[m[0;32;32m2024-10-01 13:52:48.531|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:49, rop:68%
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:50, rop:68%
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:19, percent:100, rop:70%
+[m[1;33m2024-10-01 13:53:13.299|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [19st] success:oem.xfs.gz
+[m[1;33m2024-10-01 13:53:13.299|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [20st] deploy:system.xfs.gz
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:0, rop:70%
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:13.299|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:13.620|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:1, rop:70%
+[m[0;32;32m2024-10-01 13:53:13.772|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:2, rop:70%
+[m[0;32;32m2024-10-01 13:53:14.162|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:3, rop:70%
+[m[0;32;32m2024-10-01 13:53:14.428|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:4, rop:70%
+[m[0;32;32m2024-10-01 13:53:14.676|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:5, rop:70%
+[m[0;32;32m2024-10-01 13:53:14.993|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:6, rop:70%
+[m[0;32;32m2024-10-01 13:53:15.394|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:7, rop:70%
+[m[0;32;32m2024-10-01 13:53:15.891|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:8, rop:70%
+[m[0;32;32m2024-10-01 13:53:16.369|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:9, rop:70%
+[m[0;32;32m2024-10-01 13:53:16.737|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:10, rop:70%
+[m[0;32;32m2024-10-01 13:53:17.288|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:11, rop:70%
+[m[0;32;32m2024-10-01 13:53:17.885|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:12, rop:70%
+[m[0;32;32m2024-10-01 13:53:18.470|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:13, rop:70%
+[m[0;32;32m2024-10-01 13:53:18.846|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:14, rop:70%
+[m[0;32;32m2024-10-01 13:53:19.295|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:15, rop:70%
+[m[0;32;32m2024-10-01 13:53:19.703|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:16, rop:70%
+[m[0;32;32m2024-10-01 13:53:20.30|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:17, rop:71%
+[m[0;32;32m2024-10-01 13:53:20.343|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:18, rop:71%
+[m[0;32;32m2024-10-01 13:53:20.761|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:19, rop:71%
+[m[0;32;32m2024-10-01 13:53:21.86|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:20, rop:71%
+[m[0;32;32m2024-10-01 13:53:21.495|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:21, rop:71%
+[m[0;32;32m2024-10-01 13:53:21.999|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:22, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.129|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:23, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.252|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:24, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.371|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:25, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.477|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:26, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.595|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:27, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.720|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:28, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.842|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:29, rop:71%
+[m[0;32;32m2024-10-01 13:53:22.958|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:30, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.75|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:31, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.189|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:32, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.317|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:33, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.449|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:34, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.584|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:35, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.714|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:36, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.847|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:37, rop:71%
+[m[0;32;32m2024-10-01 13:53:23.966|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:38, rop:71%
+[m[0;32;32m2024-10-01 13:53:24.79|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:39, rop:71%
+[m[0;32;32m2024-10-01 13:53:24.210|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:40, rop:71%
+[m[0;32;32m2024-10-01 13:53:24.493|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:41, rop:71%
+[m[0;32;32m2024-10-01 13:53:24.857|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:42, rop:71%
+[m[0;32;32m2024-10-01 13:53:25.159|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:43, rop:71%
+[m[0;32;32m2024-10-01 13:53:25.378|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:44, rop:72%
+[m[0;32;32m2024-10-01 13:53:25.678|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:45, rop:72%
+[m[0;32;32m2024-10-01 13:53:25.892|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:46, rop:72%
+[m[0;32;32m2024-10-01 13:53:26.240|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:47, rop:72%
+[m[0;32;32m2024-10-01 13:53:26.726|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:48, rop:72%
+[m[0;32;32m2024-10-01 13:53:27.92|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:49, rop:72%
+[m[0;32;32m2024-10-01 13:53:46.45|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:50, rop:72%
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:20, percent:100, rop:74%
+[m[1;33m2024-10-01 13:53:46.93|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [20st] success:system.xfs.gz
+[m[1;33m2024-10-01 13:53:46.93|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [21st] deploy:ifs2_la.ifs.gz
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:0, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:46.93|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:46.203|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:1, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.296|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:2, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.410|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:3, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.539|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:4, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.629|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:5, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.723|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:6, rop:74%
+[m[0;32;32m2024-10-01 13:53:46.909|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:7, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.29|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:8, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.124|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:9, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.259|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:10, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.353|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:11, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.406|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:12, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.464|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:13, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.550|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:14, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.660|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:15, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.771|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:16, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.879|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:17, rop:74%
+[m[0;32;32m2024-10-01 13:53:47.986|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:18, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.106|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:19, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.218|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:20, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.351|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:21, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.411|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:22, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.508|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:23, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.600|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:24, rop:74%
+[m[0;32;32m2024-10-01 13:53:48.683|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:25, rop:75%
+[m[0;32;32m2024-10-01 13:53:48.758|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:26, rop:75%
+[m[0;32;32m2024-10-01 13:53:48.862|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:27, rop:75%
+[m[0;32;32m2024-10-01 13:53:48.972|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:28, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.119|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:29, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.248|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:30, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.360|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:31, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.454|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:32, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.519|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:33, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.624|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:34, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.715|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:35, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.828|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:36, rop:75%
+[m[0;32;32m2024-10-01 13:53:49.914|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:37, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.20|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:38, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.142|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:39, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.252|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:40, rop:75%
+[m[0;32;31m2024-10-01 13:53:50.386|E|1921060|LpLoglpCluster 206381237               /opt/usr/bin/lpUCM   293   3%  29%   1672k   0%
+[m[0;32;32m2024-10-01 13:53:50.394|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:41, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.454|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:42, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.481|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:43, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.527|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:44, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.558|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:45, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.600|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:46, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.669|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:47, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.753|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:48, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.830|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:49, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:50, rop:75%
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:21, percent:100, rop:77%
+[m[1;33m2024-10-01 13:53:50.924|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [21st] success:ifs2_la.ifs.gz
+[m[1;33m2024-10-01 13:53:50.924|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [22st] deploy:boot.bin.rawgz
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:0, rop:77%
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:50.924|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:50.950|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:1, rop:77%
+[m[0;32;32m2024-10-01 13:53:50.978|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:2, rop:77%
+[m[0;32;32m2024-10-01 13:53:51.1|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:3, rop:77%
+[m[0;32;32m2024-10-01 13:53:51.52|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:4, rop:77%
+[m[0;32;32m2024-10-01 13:53:51.76|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:5, rop:77%
+[m[0;32;32m2024-10-01 13:53:51.99|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:6, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.127|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:7, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.177|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:8, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.203|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:9, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.227|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:10, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.251|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:11, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.304|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:12, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.331|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:13, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.355|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:14, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.387|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:15, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.437|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:16, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.455|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:17, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.468|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:18, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.475|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:19, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.507|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:20, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.522|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:21, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.529|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:22, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.540|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:23, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.566|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:24, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.618|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:25, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.648|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:26, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.676|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:27, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.745|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:28, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.790|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:29, rop:78%
+[m[0;32;32m2024-10-01 13:53:51.891|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:30, rop:78%
+[m[0;32;32m2024-10-01 13:53:52.6|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:31, rop:78%
+[m[0;32;32m2024-10-01 13:53:52.16|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:32, rop:78%
+[m[0;32;32m2024-10-01 13:53:52.24|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:33, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.33|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:34, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.44|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:35, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.65|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:36, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.95|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:37, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.104|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:38, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.115|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:39, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.124|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:40, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.133|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:41, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.156|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:42, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.174|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:43, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.189|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:44, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.199|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:45, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.208|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:46, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.218|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:47, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.246|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:48, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.256|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:49, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.318|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:50, rop:79%
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:22, percent:100, rop:81%
+[m[1;33m2024-10-01 13:53:52.504|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [22st] success:boot.bin.rawgz
+[m[1;33m2024-10-01 13:53:52.504|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [23st] deploy:vendor_boot.bin.rawgz
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:0, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:52.504|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:1, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.505|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:2, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.507|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:4, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.508|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:5, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.510|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:6, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.512|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:8, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.513|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:9, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.514|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:10, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.515|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:12, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.517|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:13, rop:81%
+[m[0;32;32m2024-10-01 13:53:52.518|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:15, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.520|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:16, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.521|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:17, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.522|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:19, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.523|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:20, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.525|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:21, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.527|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:23, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.528|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:24, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.529|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:25, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.531|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:27, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.532|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:28, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.534|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:30, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.535|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:31, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.536|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:32, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.538|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:34, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.539|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:35, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.541|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:36, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.542|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:38, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.543|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:39, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.544|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:40, rop:82%
+[m[0;32;32m2024-10-01 13:53:52.546|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:42, rop:83%
+[m[0;32;32m2024-10-01 13:53:52.547|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:43, rop:83%
+[m[0;32;32m2024-10-01 13:53:52.549|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:45, rop:83%
+[m[0;32;32m2024-10-01 13:53:52.619|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:46, rop:83%
+[m[0;32;32m2024-10-01 13:53:52.917|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:47, rop:83%
+[m[0;32;32m2024-10-01 13:53:53.243|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:49, rop:83%
+[m[0;32;32m2024-10-01 13:53:53.535|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:50, rop:83%
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:23, percent:100, rop:85%
+[m[1;33m2024-10-01 13:53:53.743|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [23st] success:vendor_boot.bin.rawgz
+[m[1;33m2024-10-01 13:53:53.743|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [24st] deploy:super.android.gz
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:0, rop:85%
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:53:53.743|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:53:58.456|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:1, rop:85%
+[m[0;32;32m2024-10-01 13:54:02.997|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:2, rop:85%
+[m[0;32;32m2024-10-01 13:54:07.376|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:3, rop:85%
+[m[0;32;32m2024-10-01 13:54:11.225|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:4, rop:85%
+[m[0;32;32m2024-10-01 13:54:15.348|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:5, rop:85%
+[m[0;32;32m2024-10-01 13:54:20.72|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:6, rop:85%
+[m[0;32;32m2024-10-01 13:54:25.376|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:7, rop:85%
+[m[0;32;32m2024-10-01 13:54:30.65|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:8, rop:85%
+[m[0;32;32m2024-10-01 13:54:34.306|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:9, rop:85%
+[m[0;32;32m2024-10-01 13:54:39.737|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:10, rop:85%
+[m[0;32;32m2024-10-01 13:54:44.705|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:11, rop:85%
+[m[0;32;32m2024-10-01 13:54:51.260|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:12, rop:85%
+[m[0;32;31m2024-10-01 13:54:53.487|E|1921060|LpLoglpCluster 206381237               /opt/usr/bin/lpUCM   260   3%  26%   1672k   0%
+[m[0;32;32m2024-10-01 13:54:55.707|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:13, rop:85%
+[m[0;32;32m2024-10-01 13:54:59.888|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:14, rop:85%
+[m[0;32;32m2024-10-01 13:55:02.492|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:15, rop:85%
+[m[0;32;32m2024-10-01 13:55:05.439|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:16, rop:85%
+[m[0;32;32m2024-10-01 13:55:09.487|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:17, rop:85%
+[m[0;32;32m2024-10-01 13:55:12.738|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:18, rop:85%
+[m[0;32;32m2024-10-01 13:55:14.854|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:19, rop:85%
+[m[0;32;32m2024-10-01 13:55:17.620|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:20, rop:85%
+[m[0;32;32m2024-10-01 13:55:20.941|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:21, rop:85%
+[m[0;32;32m2024-10-01 13:55:23.905|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:22, rop:86%
+[m[0;32;32m2024-10-01 13:55:26.751|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:23, rop:86%
+[m[0;32;32m2024-10-01 13:55:30.538|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:24, rop:86%
+[m[0;32;32m2024-10-01 13:55:35.782|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:25, rop:86%
+[m[0;32;32m2024-10-01 13:55:37.784|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:26, rop:86%
+[m[0;32;32m2024-10-01 13:55:41.194|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:27, rop:86%
+[m[0;32;32m2024-10-01 13:55:44.319|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:28, rop:86%
+[m[0;32;32m2024-10-01 13:55:47.883|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:29, rop:86%
+[m[0;32;32m2024-10-01 13:55:50.354|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:30, rop:86%
+[m[0;32;32m2024-10-01 13:55:52.978|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:31, rop:86%
+[m[0;32;32m2024-10-01 13:55:55.196|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:32, rop:86%
+[m[0;32;31m2024-10-01 13:55:56.580|E|1921060|LpLoglpCluster 206381237               /opt/usr/bin/lpUCM   216   2%  21%   1672k   0%
+[m[0;32;32m2024-10-01 13:55:57.6|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:33, rop:86%
+[m[0;32;32m2024-10-01 13:55:58.718|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:34, rop:86%
+[m[0;32;32m2024-10-01 13:56:00.470|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:35, rop:86%
+[m[0;32;32m2024-10-01 13:56:02.192|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:36, rop:86%
+[m[0;32;32m2024-10-01 13:56:05.1|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:37, rop:86%
+[m[0;32;32m2024-10-01 13:56:06.710|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:38, rop:86%
+[m[0;32;32m2024-10-01 13:56:08.372|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:39, rop:86%
+[m[0;32;32m2024-10-01 13:56:10.4|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:40, rop:86%
+[m[0;32;32m2024-10-01 13:56:11.700|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:41, rop:86%
+[m[0;32;32m2024-10-01 13:56:13.444|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:42, rop:86%
+[m[0;32;32m2024-10-01 13:56:15.105|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:43, rop:86%
+[m[0;32;32m2024-10-01 13:56:16.828|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:44, rop:86%
+[m[0;32;32m2024-10-01 13:56:21.700|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:45, rop:86%
+[m[0;32;32m2024-10-01 13:56:23.280|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:46, rop:86%
+[m[0;32;32m2024-10-01 13:56:24.404|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:47, rop:86%
+[m[0;32;32m2024-10-01 13:56:26.607|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:48, rop:86%
+[m[0;32;32m2024-10-01 13:56:29.723|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:49, rop:87%
+[m[0;32;32m2024-10-01 13:56:31.426|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:50, rop:87%
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:24, percent:100, rop:88%
+[m[1;33m2024-10-01 13:56:31.434|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [24st] success:super.android.gz
+[m[1;33m2024-10-01 13:56:31.434|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [25st] deploy:vbmeta.bin.rawgz
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:25, percent:0, rop:88%
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name raw, handler_name = raw
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler raw, type = 0
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:25, percent:50, rop:90%
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:25, percent:100, rop:92%
+[m[1;33m2024-10-01 13:56:31.434|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [25st] success:vbmeta.bin.rawgz
+[m[1;33m2024-10-01 13:56:31.434|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [26st] deploy:fw_config_9071CL_VB.bin.rawgz
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:26, percent:0, rop:92%
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name switch, handler_name = raw
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 2, name switch, handler_name = rdiff_image
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 3, name switch, handler_name = rdiff_file
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 4, name switch, handler_name = remote_camera
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 5, name switch, handler_name = lidar
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 6, name switch, handler_name = switch
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler switch, type = 1
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name switch, handler_name = raw
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 2, name switch, handler_name = rdiff_image
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 3, name switch, handler_name = rdiff_file
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 4, name switch, handler_name = remote_camera
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 5, name switch, handler_name = lidar
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 6, name switch, handler_name = switch
+[m[0;32;32m2024-10-01 13:56:31.434|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler switch, type = 1
+[m[0;32;32m2024-10-01 13:56:31.436|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:26, percent:12, rop:93%
+[m[0;32;32m2024-10-01 13:56:31.436|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:26, percent:25, rop:93%
+[m[0;32;32m2024-10-01 13:56:31.436|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:26, percent:38, rop:94%
+[m[0;32;32m2024-10-01 13:56:31.437|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:26, percent:50, rop:94%
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[1;33m2024-10-01 13:56:31.439|W|206381237|lpUCM [switch_rtl9071_handler.c:FDS_idhSwitchIchs:58] cur version 0x71160006, update fw version 0x71160006, updateVersion 0x71160006
+[m[1;33m2024-10-01 13:56:31.439|W|206381237|lpUCM [switch_rtl9071_handler.c:FDS_idhSwitchIchs:62] Same version number, no upgrade required!!!
+[m[1;33m2024-10-01 13:56:31.439|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [26st] success:fw_config_9071CL_VB.bin.rawgz
+[m[1;33m2024-10-01 13:56:31.439|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:435] start [27st] deploy:fw_config_9068CL_VB.bin.rawgz
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:27, percent:0, rop:96%
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name switch, handler_name = raw
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 2, name switch, handler_name = rdiff_image
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 3, name switch, handler_name = rdiff_file
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 4, name switch, handler_name = remote_camera
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 5, name switch, handler_name = lidar
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 6, name switch, handler_name = switch
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler switch, type = 1
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 1, name switch, handler_name = raw
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 2, name switch, handler_name = rdiff_image
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 3, name switch, handler_name = rdiff_file
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 4, name switch, handler_name = remote_camera
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 5, name switch, handler_name = lidar
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:79] find time 6, name switch, handler_name = switch
+[m[0;32;32m2024-10-01 13:56:31.439|I|206381237|lpUCM [handler.c:FDS_idhFindDesc:94] find handler switch, type = 1
+[m[0;32;32m2024-10-01 13:56:31.440|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:27, percent:12, rop:96%
+[m[0;32;32m2024-10-01 13:56:31.440|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:27, percent:25, rop:97%
+[m[0;32;32m2024-10-01 13:56:31.440|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:27, percent:38, rop:97%
+[m[0;32;32m2024-10-01 13:56:31.441|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:27, percent:50, rop:98%
+[m[0;32;32m2024-10-01 13:56:31.443|I|206381237|lpUCM [handler.c:FDS_idhExtractFile:234] CPIO extract success
+[m[1;33m2024-10-01 13:56:31.444|W|206381237|lpUCM [switch_rtl9071_handler.c:FDS_idhSwitchIchs:58] cur version 0x71160006, update fw version 0x68100002, updateVersion 0x68100002
+[m[1;33m2024-10-01 13:56:31.449|W|206381237|lpUCM [switch_rtl9071_handler.c:FDS_idhSwitchIchs:73] cur switch device_id id:0xe1-ver:VB packDeviceId id:0xe3-ver:VB
+[m[1;33m2024-10-01 13:56:31.449|W|206381237|lpUCM [switch_rtl9071_handler.c:FDS_idhSwitchIchs:76] Inconsistent chip models, no upgrade required!!!
+[m[1;33m2024-10-01 13:56:31.449|W|206381237|lpUCM [scm.c:FDS_scmDeployImages:443] deploy [27st] success:fw_config_9068CL_VB.bin.rawgz
+[m[0;32;32m2024-10-01 13:56:31.449|I|206381237|lpUCM [fds.cpp:FDS_OnLocalUpgProgress:246] total: 27, curr:28, percent:0, rop:100%
+[m[1;33m2024-10-01 13:56:31.449|W|206381237|lpUCM [scm.c:FDS_scmOnHandleFile:969] upgMode: 0, switchAB:1,
+[m[1;33m2024-10-01 13:56:31.451|W|206381237|lpUCM [bootChain.c:FDS_bcSwitchChain:87] swdl_utils: WARN swdl misc checksum fail, err=26
+[m[0;32;32m2024-10-01 13:56:31.460|I|206381237|lpUCM IpcKeyValueClient construct
+[m[1;33m2024-10-01 13:56:31.460|W|206381237|lpUCM IpcClientChannel open suc, retries: 0 
+[m[0;32;32m2024-10-01 13:56:31.460|I|206381237|lpUCM IpcKeyValueClient::init ipcclient suc
+[m[0;32;32m2024-10-01 13:56:31.460|I|206381237|lpUCM DbKeyValueStorage construct.
+[m[0;32;32m2024-10-01 13:56:31.460|I|206381237|lpUCM DbKeyValueStorage::Init filename:/opt/data/config/appData.db, filebackname:/opt/data/config/appData.dbbak
+[m[0;32;31m2024-10-01 13:56:31.463|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;31m2024-10-01 13:56:31.463|E|206381237|lpUCM getvalue uselast sqlite3_step err:101
+[m[0;32;32m2024-10-01 13:56:31.463|I|206381237|lpUCM db backup thread begin.
+[m[0;32;32m2024-10-01 13:56:31.463|I|206381237|lpUCM DbKeyValueStorage init succ.
+[m[0;32;32m2024-10-01 13:56:31.465|I|206381237|lpUCM PER_storageCreate create success
+[m[1;33m2024-10-01 13:56:31.465|W|206381237|lpUCM [upa.c:FDS_upaWriteVersion:104] last version info: version: 1.03.0002, date : 2024102.
+[m[0;32;32m2024-10-01 13:56:31.466|I|206381237|lpUCM [strUtil.cpp:FDS_strToBCD:290] Get date: 2024101
+[m[1;33m2024-10-01 13:56:31.466|W|206381237|lpUCM [upa.c:FDS_upaWriteVersion:120] new version info: version: 1.04.0002, date:2024101.
+[m[1;33m2024-10-01 13:56:31.466|W|1548381|lpPer DbAdapter::SetValue setvalue key: EOL_CARFACTORY_ECU_SOFTWARE_VERSION, value: 0x31 2e 30 34 2e 30 30 30 32 00 , authority: lpUCM
+[m[1;33m2024-10-01 13:56:31.467|W|206381237|lpUCM [upa.c:FDS_upaWriteVersion:131] new version info:1.04.0002 date : 2024101, has been successfully updated.
+[m[1;33m2024-10-01 13:56:31.468|W|1548381|lpPer DbAdapter::SetValue setvalue key: EOL_SUPPLIER_ECU_SOFTWARE_VERSION, value: 0x31 2e 30 34 2e 30 30 30 32 00 , authority: lpUCM
+[m[1;33m2024-10-01 13:56:31.469|W|1548381|lpPer DbAdapter::SetValue setvalue key: EOL_PROGRAMMING_DATA, value: 0x20 24 10 01 , authority: lpUCM
+[m[0;32;32m2024-10-01 13:56:31.470|I|206381237|lpUCM [upa.c:FDS_upaWriteVersion:166] programTimes 3
+[m[1;33m2024-10-01 13:56:31.471|W|1548381|lpPer DbAdapter::SetValue setvalue key: EOL_PROGRAMMING_TIMES, value: 0x03 00 , authority: lpUCM
+[m[1;33m2024-10-01 13:56:31.472|W|206381237|lpUCM [upa.c:FDS_upaWriteVersion:175] new supplier version 1.04.0002 update count 3 
+[m[1;33m2024-10-01 13:56:31.472|W|1548381|lpPer DbAdapter::SetValue setvalue key: EOL_TRY_PROGRAMMING_TIMES, value: 0x00 , authority: lpUCM
+[m[1;33m2024-10-01 13:56:31.473|W|206381237|lpUCM [upa.c:FDS_upaWriteVersion:187] update ver:1.04.0002, supplier:1.04.0002, date:2024102, program times:3.
+[m[0;32;32m2024-10-01 13:56:31.473|I|206381237|lpUCM IpcKeyValueClient deconstruct
+[m[0;32;32m2024-10-01 13:56:32.464|I|206381237|lpUCM db backup thread end.
+[m[0;32;32m2024-10-01 13:56:32.465|I|206381237|lpUCM DbKeyValueStorage deconstruct.
+[m[0;32;32m2024-10-01 13:56:32.465|I|206381237|lpUCM PerClient deconstruct
+[m[0;32;32m2024-10-01 13:56:32.465|I|206381237|lpUCM [scm.c:FDS_scmUpgradeFromFile:1017] handle file result:0
