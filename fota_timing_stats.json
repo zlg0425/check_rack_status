@@ -1,0 +1,16 @@
+{
+  "md5_calculation": [
+    {
+      "timestamp": 1766140766.5519397,
+      "duration": 35.231285572052
+    }
+  ],
+  "file_upload": [
+    {
+      "timestamp": 1766140767.5042186,
+      "duration": 0.7772738933563232,
+      "file_size": 6290772727
+    }
+  ],
+  "lpucm_execution": []
+}

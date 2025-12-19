@@ -42,10 +42,14 @@ status_cache = {
 cache_lock = threading.Lock()
 FOTA_LOG = "fota.log"
 BACKEND_LOG = "backend.log"
+FOTA_TIMING_STATS_FILE = "fota_timing_stats.json"
 
 # 上传任务进度字典 {task_id: {"progress": 0-100, "status": "uploading|done|error", "result": {...}}}
 upload_tasks = {}
 upload_tasks_lock = threading.Lock()
+
+# FOTA耗时统计锁
+fota_timing_stats_lock = threading.Lock()
 
 # FOTA任务进度字典 {task_id: {"progress": 0-100, "status": "checking|md5|uploading|upgrading|done|error", "step": "...", "result": {...}}}
 fota_tasks = {}
@@ -80,6 +84,94 @@ def log_srv(message: str):
             f.write(f"[{ts}] {message}\n")
     except Exception:
         pass
+
+
+def load_fota_timing_stats():
+    """加载FOTA耗时统计"""
+    try:
+        if os.path.exists(FOTA_TIMING_STATS_FILE):
+            with open(FOTA_TIMING_STATS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {
+        "md5_calculation": [],
+        "file_upload": [],
+        "lpucm_execution": []
+    }
+
+
+def save_fota_timing_stats(stats):
+    """保存FOTA耗时统计"""
+    try:
+        with open(FOTA_TIMING_STATS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(stats, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def record_fota_timing(operation, duration_seconds, file_size_bytes=None):
+    """记录FOTA操作耗时
+    
+    Args:
+        operation: 操作类型 ("md5_calculation", "file_upload", "lpucm_execution")
+        duration_seconds: 耗时（秒）
+        file_size_bytes: 文件大小（字节），用于上传操作
+    """
+    with fota_timing_stats_lock:
+        stats = load_fota_timing_stats()
+        
+        record = {
+            "timestamp": time.time(),
+            "duration": duration_seconds,
+        }
+        if file_size_bytes is not None:
+            record["file_size"] = file_size_bytes
+        
+        stats[operation].append(record)
+        
+        # 只保留最近1000条记录
+        if len(stats[operation]) > 1000:
+            stats[operation] = stats[operation][-1000:]
+        
+        save_fota_timing_stats(stats)
+
+
+def get_avg_fota_timing(operation, file_size_bytes=None):
+    """获取FOTA操作的平均耗时（秒）
+    
+    Args:
+        operation: 操作类型 ("md5_calculation", "file_upload", "lpucm_execution")
+        file_size_bytes: 文件大小（字节），用于上传操作时按文件大小分组计算平均值
+    
+    Returns:
+        平均耗时（秒），如果没有数据则返回None
+    """
+    with fota_timing_stats_lock:
+        stats = load_fota_timing_stats()
+        
+        if operation not in stats or len(stats[operation]) == 0:
+            return None
+        
+        records = stats[operation]
+        
+        # 对于上传操作，如果提供了文件大小，则只计算相似大小文件的平均值
+        if operation == "file_upload" and file_size_bytes is not None:
+            # 计算相似大小范围（±20%）
+            size_min = file_size_bytes * 0.8
+            size_max = file_size_bytes * 1.2
+            filtered_records = [
+                r for r in records
+                if "file_size" in r and size_min <= r["file_size"] <= size_max
+            ]
+            if len(filtered_records) > 0:
+                records = filtered_records
+        
+        if len(records) == 0:
+            return None
+        
+        total_duration = sum(r["duration"] for r in records)
+        return total_duration / len(records)
 
 
 def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: str, filename: str, data: bytes, progress_callback=None, batch_id=None, task_id=None):
@@ -482,11 +574,27 @@ def api_fota():
             fota_tasks[task_id] = {"progress": 0, "status": "checking", "step": "开始检查...", "result": None}
 
         def update_fota_progress(progress, status, step):
+            # 获取预估耗时
+            estimated_time = None
+            if status == "md5":
+                avg_md5 = get_avg_fota_timing("md5_calculation")
+                if avg_md5:
+                    estimated_time = f"（预估 {int(avg_md5 / 60)} 分钟）"
+            elif status == "uploading":
+                avg_upload = get_avg_fota_timing("file_upload", len(data))
+                if avg_upload:
+                    estimated_time = f"（预估 {int(avg_upload / 60)} 分钟）"
+            elif status == "upgrading":
+                avg_ucm = get_avg_fota_timing("lpucm_execution")
+                if avg_ucm:
+                    estimated_time = f"（预估 {int(avg_ucm / 60)} 分钟）"
+            
+            step_with_time = step + (estimated_time or "")
             with fota_tasks_lock:
                 if task_id in fota_tasks:
                     fota_tasks[task_id]["progress"] = progress
                     fota_tasks[task_id]["status"] = status
-                    fota_tasks[task_id]["step"] = step
+                    fota_tasks[task_id]["step"] = step_with_time
 
         def do_fota():
             try:
@@ -503,7 +611,10 @@ def api_fota():
                     update_fota_progress(10, "checking", "远端文件已存在")
                     # 步骤2：检验MD5 (10-30%)
                     update_fota_progress(15, "md5", "计算远端文件MD5...")
+                    md5_start_time = time.time()
                     ok_md5_pre, r_md5_pre = remote_md5(server_name, server_ip, port, remote_path)
+                    md5_duration = time.time() - md5_start_time
+                    record_fota_timing("md5_calculation", md5_duration)
                     if ok_md5_pre:
                         update_fota_progress(25, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5_pre[:8]}...")
                         if r_md5_pre == local_md5:
@@ -535,7 +646,10 @@ def api_fota():
                         update_fota_progress(percent, "uploading", f"上传中... {int((loaded/total)*100) if total > 0 else 0}%")
                     
                     update_fota_progress(30, "uploading", "开始上传文件...")
+                    upload_start_time = time.time()
                     ok, info = sftp_upload(server_name, server_ip, port, fota_target_dir, filename, data, upload_progress_cb)
+                    upload_duration = time.time() - upload_start_time
+                    record_fota_timing("file_upload", upload_duration, len(data))
                     if not ok:
                         log_fota(f"[{server_name}/{server_ip}:{port}] SCP失败: {info}")
                         with fota_tasks_lock:
@@ -547,7 +661,10 @@ def api_fota():
 
                     # 步骤4：上传后MD5校验 (80-90%)
                     update_fota_progress(80, "md5", "上传完成，计算远端MD5...")
+                    md5_start_time = time.time()
                     ok_md5, r_md5 = remote_md5(server_name, server_ip, port, remote_path)
+                    md5_duration = time.time() - md5_start_time
+                    record_fota_timing("md5_calculation", md5_duration)
                     if not ok_md5:
                         log_fota(f"[{server_name}/{server_ip}:{port}] 远端MD5失败: {r_md5}")
                         with fota_tasks_lock:
@@ -584,7 +701,10 @@ def api_fota():
                     return
                 log_fota(f"[{server_name}/{server_ip}:{port}] MD5一致，开始执行 lpUCM -i {remote_path}")
 
+                ucm_start_time = time.time()
                 ok_ucm, info_ucm = run_ucm_with_log(server_name, server_ip, port, remote_path)
+                ucm_duration = time.time() - ucm_start_time
+                record_fota_timing("lpucm_execution", ucm_duration)
                 if not ok_ucm:
                     log_fota(f"[{server_name}/{server_ip}:{port}] 升级失败: {info_ucm}")
                     with fota_tasks_lock:
@@ -737,11 +857,27 @@ def api_batch_fota():
                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 开始FOTA，文件={filename}，本地MD5={local_md5}")
 
                     def update_fota_progress(progress, status, step):
+                        # 获取预估耗时
+                        estimated_time = None
+                        if status == "md5":
+                            avg_md5 = get_avg_fota_timing("md5_calculation")
+                            if avg_md5:
+                                estimated_time = f"（预估 {int(avg_md5 / 60)} 分钟）"
+                        elif status == "uploading":
+                            avg_upload = get_avg_fota_timing("file_upload", len(data))
+                            if avg_upload:
+                                estimated_time = f"（预估 {int(avg_upload / 60)} 分钟）"
+                        elif status == "upgrading":
+                            avg_ucm = get_avg_fota_timing("lpucm_execution")
+                            if avg_ucm:
+                                estimated_time = f"（预估 {int(avg_ucm / 60)} 分钟）"
+                        
+                        step_with_time = step + (estimated_time or "")
                         with fota_tasks_lock:
                             if tid in fota_tasks:
                                 fota_tasks[tid]["progress"] = progress
                                 fota_tasks[tid]["status"] = status
-                                fota_tasks[tid]["step"] = step
+                                fota_tasks[tid]["step"] = step_with_time
                         # 检查是否已取消
                         with batch_fota_tasks_lock:
                             if batch_id not in batch_fota_tasks or batch_fota_tasks[batch_id].get("cancelled", False):
@@ -770,7 +906,10 @@ def api_batch_fota():
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
                         
+                        md5_start_time = time.time()
                         ok_md5_pre, r_md5_pre = remote_md5(sname, sip, port, remote_path)
+                        md5_duration = time.time() - md5_start_time
+                        record_fota_timing("md5_calculation", md5_duration)
                         
                         if ok_md5_pre:
                             cancelled = update_fota_progress(25, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5_pre[:8]}...")
@@ -830,9 +969,12 @@ def api_batch_fota():
                         if cancelled:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
+                        upload_start_time = time.time()
                         ok, info, transport_ref, sftp_ref = sftp_upload_with_cancel(
                             sname, sip, port, fota_target_dir, filename, data, upload_progress_cb, batch_id, tid
                         )
+                        upload_duration = time.time() - upload_start_time
+                        record_fota_timing("file_upload", upload_duration, len(data))
                         if transport_ref:
                             transport = transport_ref
                         if sftp_ref:
@@ -901,7 +1043,10 @@ def api_batch_fota():
                         
                         # 等待文件完全写入磁盘（特别是8650系列使用SFTP读取时）
                         time.sleep(1.0)  # 等待1秒确保文件完全写入
+                        md5_start_time = time.time()
                         ok_md5, r_md5 = remote_md5(sname, sip, port, remote_path)
+                        md5_duration = time.time() - md5_start_time
+                        record_fota_timing("md5_calculation", md5_duration)
                         
                         # 检查是否已取消
                         with batch_fota_tasks_lock:
@@ -972,7 +1117,10 @@ def api_batch_fota():
                     
                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] MD5一致，开始执行 lpUCM -i {remote_path}")
 
+                    ucm_start_time = time.time()
                     ok_ucm, info_ucm = run_ucm_with_log(sname, sip, port, remote_path)
+                    ucm_duration = time.time() - ucm_start_time
+                    record_fota_timing("lpucm_execution", ucm_duration)
                     
                     # 检查是否已取消
                     with batch_fota_tasks_lock:
