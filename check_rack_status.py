@@ -441,7 +441,9 @@ def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_fi
     """启动日志会话B，2秒后启动A执行 lpUCM，A 结束后再等待 tail_wait 秒再停止日志。返回 (ok, info)。"""
     if log_file is None:
         import time
-        log_file = f"ucm_{server_name}_{ip}_{port}_{int(time.time())}.log"
+        # 将时间戳转换为具体时间格式：YYYYMMDD_HHMMSS
+        time_str = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+        log_file = f"ucm_{server_name}_{ip}_{port}_{time_str}.log"
     log_stop = threading.Event()
     log_err = []
 
@@ -835,8 +837,8 @@ def check_ssh_login(server_name, ip, port):
         # 加载对应端口的私钥
         private_key = paramiko.RSAKey.from_private_key_file(key_path)
         
-        # 使用指定端口连接，对临时性错误进行重试
-        max_retries = 3  # 增加重试次数，提高成功率
+        # 使用指定端口连接，对临时性错误进行重试（优化：减少重试次数和间隔）
+        max_retries = 2  # 优化：从3次减少到2次，提高响应速度
         last_error = None
         for attempt in range(max_retries):
             client = None
@@ -867,7 +869,14 @@ def check_ssh_login(server_name, ip, port):
                         client.close()
                     except:
                         pass
-                # 如果是临时性连接错误（如 "No existing session"、"Error reading SSH protocol banner"、OSError等），进行重试
+                
+                # 快速失败：对于明显的认证失败或连接拒绝，不重试
+                if isinstance(e, paramiko.AuthenticationException):
+                    return False, f"端口{port} SSH认证失败（密钥不匹配）"
+                if "Connection refused" in error_msg or "Connection reset" in error_msg:
+                    return False, f"端口{port} SSH连接被拒绝: {error_msg}"
+                
+                # 如果是临时性连接错误，进行重试
                 if ("No existing session" in error_msg or 
                     "Connection closed" in error_msg or 
                     "Error reading SSH protocol banner" in error_msg or
@@ -875,13 +884,12 @@ def check_ssh_login(server_name, ip, port):
                     isinstance(e, OSError) or
                     isinstance(e, socket.error)):
                     if attempt < max_retries - 1:
-                        # 等待一小段时间后重试
+                        # 优化：缩短重试间隔，从1-1.5秒减少到0.5秒
                         import time
-                        # 增加重试间隔，给服务器更多时间恢复
-                        time.sleep(1.0 if attempt == 0 else 1.5)
+                        time.sleep(0.5)
                         continue
                     # 重试失败，返回友好的错误信息
-                    retry_error_msg = f"端口{port} SSH连接临时性错误（已重试）: {error_msg}"
+                    retry_error_msg = f"端口{port} SSH连接临时性错误（已重试{max_retries}次）: {error_msg}"
                     return False, retry_error_msg
                 # 其他SSH错误直接返回
                 return False, f"端口{port} SSH连接错误: {error_msg}"
@@ -892,7 +900,7 @@ def check_ssh_login(server_name, ip, port):
                         client.close()
                     except:
                         pass
-                # 非SSH异常，直接返回
+                # 非SSH异常，直接返回（不重试）
                 return False, f"端口{port} 其他错误: {str(e)}"
         
         # 所有重试都失败
@@ -1007,19 +1015,69 @@ def format_report(results_list):
 
 
 def run_checks_once():
-    """执行一次全量检查并返回结果列表"""
+    """执行一次全量检查并返回结果列表，带总超时保护"""
     all_results = []
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    
+    # 动态计算并发数：20-30之间，但不超过服务器数量
+    server_count = len(server_dict)
+    max_workers = min(max(20, server_count // 5), 30, server_count)
+    
+    # 总超时保护：根据服务器数量动态调整，最少3分钟，最多5分钟
+    # 估算：每台服务器最多60秒，考虑并发，总超时 = (服务器数 / 并发数) * 60秒 + 缓冲
+    estimated_time = (server_count / max_workers) * 60 + 60  # 额外60秒缓冲
+    total_timeout = min(max(180, int(estimated_time)), 300)  # 3-5分钟之间
+    
+    start_time = time.time()
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_server = {
             executor.submit(check_single_server, name, ip): (name, ip)
             for name, ip in server_dict.items()
         }
 
+        # 使用超时机制处理所有future
+        completed_count = 0
         for future in as_completed(future_to_server):
+            # 检查总超时
+            elapsed = time.time() - start_time
+            if elapsed > total_timeout:
+                # 超时：取消未完成的任务并记录超时错误
+                for remaining_future in future_to_server:
+                    if not remaining_future.done():
+                        remaining_future.cancel()
+                        server_name, server_ip = future_to_server[remaining_future]
+                        all_results.append({
+                            'server_name': server_name,
+                            'server_ip': server_ip,
+                            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+                            'port_22': 'offline',
+                            'port_22_ssh': '超时',
+                            'port_22_detail': f"检查超时（总超时{total_timeout}秒）",
+                            'port_9999': 'offline',
+                            'port_9999_ssh': '超时',
+                            'port_9999_detail': f"检查超时（总超时{total_timeout}秒）"
+                        })
+                break
+            
             try:
-                result = future.result()
+                # 使用较短的超时避免单个future阻塞太久
+                remaining_timeout_for_future = max(0.1, total_timeout - elapsed)
+                result = future.result(timeout=min(remaining_timeout_for_future, 10.0))
                 all_results.append(result)
+                completed_count += 1
+            except TimeoutError:
+                server_name, server_ip = future_to_server[future]
+                all_results.append({
+                    'server_name': server_name,
+                    'server_ip': server_ip,
+                    'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'port_22': 'offline',
+                    'port_22_ssh': '超时',
+                    'port_22_detail': f"检查超时",
+                    'port_9999': 'offline',
+                    'port_9999_ssh': '超时',
+                    'port_9999_detail': f"检查超时"
+                })
             except Exception as e:
                 server_name, server_ip = future_to_server[future]
                 all_results.append({

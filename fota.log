@@ -69,3 +69,10 @@
 [2025-12-20 11:24:10] [LP-8797-6/10.99.19.9:22] 升级失败: lpUCM stderr: swdl_lun_init:906 System banked to "A"
 gpt_open_a_lun:113 gpt secondary table is corrupted, err=15, loading primary
 [2025-12-20 13:49:07] [LP-8650-2/10.99.19.12:22] 开始FOTA，文件=LP-ADDC050-AA_V1.02.0014F_D_20251218.icsw，本地MD5=519f8b26daf8f35e5c1d9a874c7432a6
+[2025-12-20 13:53:14] [LP-8650-2/10.99.19.12:22] 上传后MD5校验，本地=519f8b26daf8f35e5c1d9a874c7432a6 远端=519f8b26daf8f35e5c1d9a874c7432a6
+[2025-12-20 13:53:14] [LP-8650-2/10.99.19.12:22] MD5一致，开始执行 lpUCM -i /opt/data/fota/LP-ADDC050-AA_V1.02.0014F_D_20251218.icsw
+[2025-12-20 13:53:20] [LP-8650-2/10.99.19.12:22] 升级失败: lpUCM stderr: swdl_lun_init:912 System banked to "A"
+[2025-12-20 13:55:26] [LP-8650-2/10.99.19.12:22] 开始FOTA，文件=LP-ADDC050-AA_V1.02.0014F_D_20251218.icsw，本地MD5=519f8b26daf8f35e5c1d9a874c7432a6
+[2025-12-20 13:55:28] [LP-8650-2/10.99.19.12:22] 远端已存在且MD5一致，跳过上传，远端MD5=519f8b26daf8f35e5c1d9a874c7432a6
+[2025-12-20 13:55:28] [LP-8650-2/10.99.19.12:22] MD5一致，开始执行 lpUCM -i /opt/data/fota/LP-ADDC050-AA_V1.02.0014F_D_20251218.icsw
+[2025-12-20 14:00:52] [LP-8650-2/10.99.19.12:22] 升级成功，远端=/opt/data/fota/LP-ADDC050-AA_V1.02.0014F_D_20251218.icsw MD5=519f8b26daf8f35e5c1d9a874c7432a6
