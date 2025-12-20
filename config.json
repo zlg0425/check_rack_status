@@ -33,6 +33,16 @@
   "auth_mode_default": "key",
   "version_command": "cat /mnt/etc/version",
   "upload_target_dir": "/tmp",
-  "fota_target_dir": "/opt/data/fota"
+  "fota_target_dir": "/opt/data/fota",
+  "fota_filename_validation": {
+    "LP-8650": {
+      "22": "LP-ADDC050",
+      "9999": "LP-ICHS046"
+    },
+    "LP-8797": {
+      "22": "LP-ADDC0C0",
+      "9999": "LP-ICHS050"
+    }
+  }
 }
 

@@ -26,6 +26,7 @@ from check_rack_status import (
     resolve_key,
     ssh_timeout,
     ensure_remote_dir,
+    fota_filename_validation,
 )
 import paramiko
 import socket
@@ -550,6 +551,8 @@ def api_fota():
             log_fota(f"[{server_name}/{server_ip}:{port}] 未选择文件")
             return jsonify({"ok": False, "error": "未选择文件"}), 400
 
+        filename = file.filename
+
         # 检查服务器是否已有正在执行的FOTA任务
         server_key = f"{server_name}:{server_ip}:{port}"
         with fota_server_locks_lock:
@@ -567,7 +570,6 @@ def api_fota():
 
         data = file.read()
         local_md5 = md5_bytes(data, server_name)
-        filename = file.filename
         remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
 
         with fota_tasks_lock:
@@ -595,11 +597,63 @@ def api_fota():
                     fota_tasks[task_id]["progress"] = progress
                     fota_tasks[task_id]["status"] = status
                     fota_tasks[task_id]["step"] = step_with_time
+                    # 如果是错误状态，设置result字段
+                    if status == "error":
+                        if fota_tasks[task_id].get("result") is None:
+                            fota_tasks[task_id]["result"] = {"ok": False, "error": step}
+                        else:
+                            fota_tasks[task_id]["result"]["error"] = step
 
         def do_fota():
             try:
                 log_fota(f"[{server_name}/{server_ip}:{port}] 开始FOTA，文件={filename}，本地MD5={local_md5}")
 
+                # 验证文件名是否包含对应端口的正确值（在检查文件存在前）
+                # #region agent log
+                import json
+                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:606","message":"文件名验证入口","data":{"fota_filename_validation":str(fota_filename_validation),"fota_filename_validation_type":str(type(fota_filename_validation)),"fota_filename_validation_bool":bool(fota_filename_validation) if fota_filename_validation else False,"server_name":server_name,"port":port,"filename":filename},"timestamp":int(time.time()*1000)}) + '\n')
+                # #endregion
+                if fota_filename_validation:
+                    # 确定服务器类型（LP-8650 或 LP-8797）
+                    server_type = None
+                    if server_name.startswith("LP-8650"):
+                        server_type = "LP-8650"
+                    elif server_name.startswith("LP-8797"):
+                        server_type = "LP-8797"
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"B","location":"web_ui.py:613","message":"服务器类型判断","data":{"server_name":server_name,"server_type":server_type,"fota_filename_validation_keys":list(fota_filename_validation.keys()) if fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    if server_type and server_type in fota_filename_validation:
+                        port_str = str(port)
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"C","location":"web_ui.py:616","message":"端口匹配检查","data":{"port":port,"port_str":port_str,"server_type":server_type,"fota_filename_validation_server_type":fota_filename_validation[server_type] if server_type in fota_filename_validation else None,"port_keys":list(fota_filename_validation[server_type].keys()) if server_type in fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        if port_str in fota_filename_validation[server_type]:
+                            expected_value = fota_filename_validation[server_type][port_str]
+                            # #region agent log
+                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"D","location":"web_ui.py:618","message":"文件名验证检查","data":{"expected_value":expected_value,"filename":filename,"expected_in_filename":expected_value in filename},"timestamp":int(time.time()*1000)}) + '\n')
+                            # #endregion
+                            if expected_value not in filename:
+                                error_msg = f"选择的文件不对，请选择对应文件：{expected_value}（{server_type} 端口{port}）"
+                                log_fota(f"[{server_name}/{server_ip}:{port}] {error_msg}，当前文件名={filename}")
+                                update_fota_progress(0, "error", error_msg)
+                                # #region agent log
+                                import json
+                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                    task_info = fota_tasks.get(task_id, {})
+                                    f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"H","location":"web_ui.py:638","message":"单个FOTA设置文件名验证错误后","data":{"task_id":task_id,"error_msg":error_msg,"task_status":task_info.get("status"),"task_step":task_info.get("step"),"task_result":str(task_info.get("result"))},"timestamp":int(time.time()*1000)}) + '\n')
+                                # #endregion
+                                return
+                else:
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:622","message":"fota_filename_validation为空，跳过验证","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                
                 # 步骤1：检查文件是否存在 (0-10%)
                 update_fota_progress(5, "checking", "检查远端文件是否存在...")
                 file_exists = remote_exists(server_name, server_ip, port, remote_path)
@@ -784,6 +838,8 @@ def api_batch_fota():
         if not file or file.filename == "":
             return jsonify({"ok": False, "error": "未选择文件"}), 400
 
+        filename = file.filename
+
         # 读取文件数据
         data = file.read()
         # 批量FOTA时，需要为每个服务器单独计算MD5（因为可能有8650和8797混合）
@@ -791,7 +847,6 @@ def api_batch_fota():
         # 但为了兼容性，先使用第一个服务器的类型
         first_server_name = servers[0].get("name", "") if servers else ""
         local_md5 = md5_bytes(data, first_server_name)
-        filename = file.filename
         remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
 
         # 创建批量任务
@@ -861,6 +916,50 @@ def api_batch_fota():
                     # 根据服务器类型重新计算本地MD5（确保与远端MD5计算方式一致）
                     server_local_md5 = md5_bytes(data, sname)
                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 开始FOTA，文件={filename}，本地MD5={server_local_md5}")
+
+                    # 验证文件名是否包含对应端口的正确值（在检查文件存在前）
+                    # #region agent log
+                    import json
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:888","message":"批量FOTA文件名验证入口","data":{"fota_filename_validation":str(fota_filename_validation),"fota_filename_validation_type":str(type(fota_filename_validation)),"fota_filename_validation_bool":bool(fota_filename_validation) if fota_filename_validation else False,"server_name":sname,"port":port,"filename":filename},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    if fota_filename_validation:
+                        # 确定服务器类型（LP-8650 或 LP-8797）
+                        server_type = None
+                        if sname.startswith("LP-8650"):
+                            server_type = "LP-8650"
+                        elif sname.startswith("LP-8797"):
+                            server_type = "LP-8797"
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"B","location":"web_ui.py:895","message":"批量FOTA服务器类型判断","data":{"server_name":sname,"server_type":server_type,"fota_filename_validation_keys":list(fota_filename_validation.keys()) if fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        if server_type and server_type in fota_filename_validation:
+                            port_str = str(port)
+                            # #region agent log
+                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"C","location":"web_ui.py:898","message":"批量FOTA端口匹配检查","data":{"port":port,"port_str":port_str,"server_type":server_type,"fota_filename_validation_server_type":fota_filename_validation[server_type] if server_type in fota_filename_validation else None,"port_keys":list(fota_filename_validation[server_type].keys()) if server_type in fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
+                            # #endregion
+                            if port_str in fota_filename_validation[server_type]:
+                                expected_value = fota_filename_validation[server_type][port_str]
+                                # #region agent log
+                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                    f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"D","location":"web_ui.py:900","message":"批量FOTA文件名验证检查","data":{"expected_value":expected_value,"filename":filename,"expected_in_filename":expected_value in filename},"timestamp":int(time.time()*1000)}) + '\n')
+                                # #endregion
+                                if expected_value not in filename:
+                                    error_msg = f"选择的文件不对，请选择对应文件：{expected_value}（{server_type} 端口{port}）"
+                                    log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] {error_msg}，当前文件名={filename}")
+                                    with fota_tasks_lock:
+                                        if tid in fota_tasks:
+                                            fota_tasks[tid]["progress"] = 0
+                                            fota_tasks[tid]["status"] = "error"
+                                            fota_tasks[tid]["step"] = error_msg
+                                    return
+                    else:
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:908","message":"批量FOTA fota_filename_validation为空，跳过验证","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
 
                     def update_fota_progress(progress, status, step):
                         # 获取预估耗时
@@ -2200,6 +2299,11 @@ def start_background():
 
 if __name__ == "__main__":
     load_config()  # 读取配置
+    # #region agent log
+    import json
+    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"E","location":"web_ui.py:2289","message":"load_config调用后检查fota_filename_validation","data":{"fota_filename_validation":str(fota_filename_validation),"fota_filename_validation_type":str(type(fota_filename_validation))},"timestamp":int(time.time()*1000)}) + '\n')
+    # #endregion
     # 初始化一次数据
     try:
         status_cache["data"] = run_checks_once()

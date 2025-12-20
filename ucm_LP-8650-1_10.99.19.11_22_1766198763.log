@@ -1,0 +1,30 @@
+Could not chdir to home directory /root: No such file or directory
+[m[0;32;32m2025-12-20 02:46:03.462|I|2154617|lpHids [idslib] [module_process] 0013 --- abnormal_proc_alarm_callback >>> [info] debug>>process alarm [/ifs/bin/grep UCM]
+[m[1;33m2025-12-20 02:46:05.414|W|522035335|lpUCM [fds.cpp:FDS_printVerInfo:66] Compiled on: Dec 17 2025 at 18:48:33
+[m[1;33m2025-12-20 02:46:05.414|W|522035335|lpUCM [fds.cpp:FDS_printVerInfo:68] ********************VERSION*******************
+[m[1;33m2025-12-20 02:46:05.414|W|522035335|lpUCM [fds.cpp:FDS_printVerInfo:69] Branch     : 
+[m[1;33m2025-12-20 02:46:05.414|W|522035335|lpUCM [fds.cpp:FDS_printVerInfo:70] Commit Hash: 411de96ef3abeecd7d723a680d3d8a6518ab7531
+[m[1;33m2025-12-20 02:46:05.414|W|522035335|lpUCM [fds.cpp:FDS_printVerInfo:71] Commit Time: 2025-12-11 15:50:30 +0800
+[m[1;33m2025-12-20 02:46:05.414|W|522035335|lpUCM [fds.cpp:FDS_printVerInfo:72] **********************************************
+[m[0;32;32m2025-12-20 02:46:05.414|I|522035335|lpUCM [8650_handler.c:FDS_idhGetDescTable:44] descTable is 100be9a0, g_idhTbl is 1011f0e0, size = 5
+[m[0;32;32m2025-12-20 02:46:05.422|I|522035335|lpUCM [fds.cpp:main:101] start upgrade by local file: /opt/data/fota/LP-ADDC050-AA_V1.02.0000_D_20251219.icsw
+[m[0;32;32m2025-12-20 02:46:05.422|I|522035335|lpUCM [upa.c:FDS_upaSetSilenceMode:236] FDS_upaSetSilenceMode
+[m[0;32;32m2025-12-20 02:46:05.422|I|522035335|lpUCM IpcKeyValueClient construct
+[m[1;33m2025-12-20 02:46:05.433|W|522035335|lpUCM IpcClientChannel open suc, retries: 0 
+[m[0;32;32m2025-12-20 02:46:05.433|I|522035335|lpUCM IpcKeyValueClient::init ipcclient suc
+[m[0;32;32m2025-12-20 02:46:05.434|I|522035335|lpUCM PER_storageCreate create success
+[m[1;33m2025-12-20 02:46:05.434|W|2072672|lpPer DbAdapter::SetValue setvalue key: CAL_NOFEELUP_VALIDFLAG, value: 0x00 , authority: lpUCM
+[m[0;32;32m2025-12-20 02:46:05.436|I|522035335|lpUCM IpcKeyValueClient deconstruct
+[m[0;32;32m2025-12-20 02:46:05.436|I|522035335|lpUCM PerClient deconstruct
+[m[0;32;32m2025-12-20 02:46:05.436|I|522035335|lpUCM [file.c:FDS_fileMkDir:274] Directory /opt/data/fota/ already exists
+[m[0;32;31m2025-12-20 02:46:05.437|E|522035335|lpUCM [img.c:FDS_imgGetVal:37] [scripts] FDS_cfgGetSubNodeByName fail 
+[m[1;33m2025-12-20 02:46:05.437|W|522035335|lpUCM [dum.c:FDS_dumConvertSwtchAB:151] STUB !!!
+[m[0;32;32m2025-12-20 02:46:05.437|I|522035335|lpUCM [scm.c:FDS_scmOnHandleFile:926] offset:7380
+[m[1;33m2025-12-20 02:46:05.437|W|522035335|lpUCM [dum.c:FDS_dumGetProduct:98] STUB !!!
+[m[1;33m2025-12-20 02:46:05.437|W|522035335|lpUCM [dum.c:FDS_dumGetProduct:141] product:LP-ADDC050-AA
+[m[0;32;32m2025-12-20 02:46:05.437|I|522035335|lpUCM IpcKeyValueClient construct
+[m[1;33m2025-12-20 02:46:05.437|W|522035335|lpUCM IpcClientChannel open suc, retries: 0 
+[m[0;32;32m2025-12-20 02:46:05.437|I|522035335|lpUCM IpcKeyValueClient::init ipcclient suc
+[m[0;32;32m2025-12-20 02:46:05.438|I|522035335|lpUCM PER_storageCreate create success
+[m[0;32;32m2025-12-20 02:46:05.438|I|522035335|lpUCM [upa.c:FDS_upaCmpSwVersion:51] FDS_upaCmpSwVersion throuth pia 1.02.0014F
+[m[1;33m2025-12-20 02:46:05.438|W|522035335|lpUCM [upa.c:FDS_upaCmpSwVersion:64] packect_version 1.02.0000 curversion 1.02.0014F 

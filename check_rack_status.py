@@ -47,13 +47,14 @@ auth_mode_default = "key"
 version_command = "cat /mnt/etc/version"
 upload_target_dir = "/tmp"
 fota_target_dir = "/opt/data/fota"
+fota_filename_validation = {}
 # ========================================================
 
 
 def load_config(config_path: str = CONFIG_FILE) -> str:
     """从JSON配置文件加载监控参数"""
     global server_dict, key_mapping, group_key_mapping, group_auth_mode
-    global ssh_username, ssh_timeout, check_interval, auth_mode_default, version_command, upload_target_dir, fota_target_dir
+    global ssh_username, ssh_timeout, check_interval, auth_mode_default, version_command, upload_target_dir, fota_target_dir, fota_filename_validation
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     abs_path = os.path.join(script_dir, config_path)
@@ -90,6 +91,9 @@ def load_config(config_path: str = CONFIG_FILE) -> str:
     version_command = cfg.get("version_command", version_command)
     upload_target_dir = cfg.get("upload_target_dir", upload_target_dir)
     fota_target_dir = cfg.get("fota_target_dir", fota_target_dir)
+    # 更新字典内容而不是重新赋值，以保持导入引用的有效性
+    fota_filename_validation.clear()
+    fota_filename_validation.update(cfg.get("fota_filename_validation", {}))
 
     raw_group_auth_mode = cfg.get("group_auth_mode", {})
     group_auth_mode = {k: str(v).lower() for k, v in raw_group_auth_mode.items()}
