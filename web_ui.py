@@ -180,9 +180,7 @@ def get_avg_fota_timing(operation, file_size_bytes=None):
 
 def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: str, filename: str, data=None, progress_callback=None, batch_id=None, task_id=None, stream=None, file_size=None):
     """将文件上传到指定服务器和端口，支持进度回调和取消，返回(ok, info, transport, sftp)
-    支持两种模式：
-    1. 传统模式：data参数（bytes），向后兼容
-    2. 流式模式：stream参数（文件流），file_size参数（文件大小）
+    统一使用流式上传模式，支持stream参数（文件流）或data参数（bytes，内部转换为流）
     
     Args:
         server_name: 服务器名称
@@ -190,12 +188,12 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
         port: 端口
         target_dir: 目标目录
         filename: 文件名
-        data: 文件数据（bytes），传统模式
+        data: 文件数据（bytes），可选，如果提供则转换为流
         progress_callback: 进度回调函数
         batch_id: 批量任务ID（用于取消检查）
         task_id: 任务ID（用于保存transport引用）
-        stream: 文件流对象，流式模式
-        file_size: 文件大小（字节），流式模式必需
+        stream: 文件流对象，优先使用
+        file_size: 文件大小（字节），必需
     """
     import io
     
@@ -203,67 +201,22 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
     safe_dir = target_dir.rstrip("/") or "/"
     remote_path = posixpath.join(safe_dir, filename)
     
-    # 确定使用哪种模式
+    # 统一为流式模式：优先使用stream，如果提供data则转换为流
     if stream is not None:
         # 流式模式
         if file_size is None:
             return False, "流式模式需要提供file_size参数", None, None
         total_size = file_size
         file_obj = stream
-    else:
-        # 传统模式（向后兼容）
-        if data is None:
-            return False, "必须提供data或stream参数", None, None
+    elif data is not None:
+        # 如果提供data参数，转换为流（向后兼容）
         total_size = len(data)
         file_obj = io.BytesIO(data)
-    # 根据文件大小动态调整chunk size以提高上传速度
-    # 使用更大的chunk size以减少网络往返次数和系统调用开销
-    if total_size > 100 * 1024 * 1024:  # >100MB
-        chunk_size = 4 * 1024 * 1024  # 4MB，进一步增大以提高速度
-    elif total_size > 10 * 1024 * 1024:  # >10MB
-        chunk_size = 2 * 1024 * 1024  # 2MB
+        if file_size is not None and file_size != total_size:
+            # 如果同时提供了file_size，使用file_size（可能更准确）
+            total_size = file_size
     else:
-        chunk_size = 1024 * 1024  # 1MB
-    
-    transport = None
-    sftp = None
-
-    def write_with_progress(f, data_bytes):
-        import time as time_module
-        written = 0
-        start_time = time_module.time()
-        last_log_time = start_time
-        last_log_bytes = 0
-        
-        while written < total_size:
-            # 检查是否已取消
-            if batch_id:
-                with batch_fota_tasks_lock:
-                    if batch_id not in batch_fota_tasks or batch_fota_tasks[batch_id].get("cancelled", False):
-                        raise Exception("任务已取消")
-            
-            chunk_start_time = time_module.time()
-            chunk = data_bytes[written:written + chunk_size]
-            f.write(chunk)
-            chunk_end_time = time_module.time()
-            written += len(chunk)
-            
-            # 每5秒记录一次上传速度和进度
-            current_time = time_module.time()
-            if current_time - last_log_time >= 5.0:
-                elapsed = current_time - start_time
-                speed = written / elapsed if elapsed > 0 else 0
-                recent_speed = (written - last_log_bytes) / (current_time - last_log_time) if (current_time - last_log_time) > 0 else 0
-                last_log_time = current_time
-                last_log_bytes = written
-            
-            if progress_callback:
-                try:
-                    progress_callback(written, total_size)
-                except Exception as e:
-                    if "任务已取消" in str(e):
-                        raise
-                    pass
+        return False, "必须提供stream或data参数", None, None
 
     try:
         if auth_mode == "none":

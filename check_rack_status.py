@@ -182,9 +182,7 @@ def ensure_remote_dir(sftp: paramiko.SFTPClient, remote_path: str):
 
 def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename: str, data=None, progress_callback=None, stream=None, file_size=None):
     """将文件上传到指定服务器和端口，支持进度回调
-    支持两种模式：
-    1. 传统模式：data参数（bytes），向后兼容
-    2. 流式模式：stream参数（文件流），file_size参数（文件大小）
+    统一使用流式上传模式，支持stream参数（文件流）或data参数（bytes，内部转换为流）
     
     Args:
         server_name: 服务器名称
@@ -192,10 +190,10 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         port: 端口
         target_dir: 目标目录
         filename: 文件名
-        data: 文件数据（bytes），传统模式
+        data: 文件数据（bytes），可选，如果提供则转换为流
         progress_callback: 进度回调函数
-        stream: 文件流对象，流式模式
-        file_size: 文件大小（字节），流式模式必需
+        stream: 文件流对象，优先使用
+        file_size: 文件大小（字节），必需
     """
     import io
     
@@ -203,22 +201,22 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
     safe_dir = target_dir.rstrip("/") or "/"
     remote_path = posixpath.join(safe_dir, filename)
     
-    # 确定使用哪种模式
+    # 统一为流式模式：优先使用stream，如果提供data则转换为流
     if stream is not None:
         # 流式模式
         if file_size is None:
             return False, "流式模式需要提供file_size参数"
         total_size = file_size
-        # 如果流不支持seek，需要先读取到BytesIO（但这样会占用内存）
-        # 为了真正的流式上传，我们假设流支持read但不一定支持seek
-        # 如果流不支持seek，putfo会直接读取流
         file_obj = stream
-    else:
-        # 传统模式（向后兼容）
-        if data is None:
-            return False, "必须提供data或stream参数"
+    elif data is not None:
+        # 如果提供data参数，转换为流（向后兼容）
         total_size = len(data)
         file_obj = io.BytesIO(data)
+        if file_size is not None and file_size != total_size:
+            # 如果同时提供了file_size，使用file_size（可能更准确）
+            total_size = file_size
+    else:
+        return False, "必须提供stream或data参数"
     
     # 根据文件大小动态调整chunk size以提高上传速度
     # 使用更大的chunk size以减少网络往返次数和系统调用开销
