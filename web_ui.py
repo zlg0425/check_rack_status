@@ -18,6 +18,9 @@ from check_rack_status import (
     sftp_upload,
     fota_target_dir,
     md5_bytes,
+    md5_stream,
+    create_md5_calculating_stream,
+    create_tee_stream,
     remote_md5,
     run_ucm_with_log,
     remote_exists,
@@ -175,12 +178,44 @@ def get_avg_fota_timing(operation, file_size_bytes=None):
         return total_duration / len(records)
 
 
-def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: str, filename: str, data: bytes, progress_callback=None, batch_id=None, task_id=None):
-    """将文件上传到指定服务器和端口，支持进度回调和取消，返回(ok, info, transport, sftp)"""
+def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: str, filename: str, data=None, progress_callback=None, batch_id=None, task_id=None, stream=None, file_size=None):
+    """将文件上传到指定服务器和端口，支持进度回调和取消，返回(ok, info, transport, sftp)
+    支持两种模式：
+    1. 传统模式：data参数（bytes），向后兼容
+    2. 流式模式：stream参数（文件流），file_size参数（文件大小）
+    
+    Args:
+        server_name: 服务器名称
+        ip: 服务器IP
+        port: 端口
+        target_dir: 目标目录
+        filename: 文件名
+        data: 文件数据（bytes），传统模式
+        progress_callback: 进度回调函数
+        batch_id: 批量任务ID（用于取消检查）
+        task_id: 任务ID（用于保存transport引用）
+        stream: 文件流对象，流式模式
+        file_size: 文件大小（字节），流式模式必需
+    """
+    import io
+    
     auth_mode = resolve_auth_mode(server_name)
     safe_dir = target_dir.rstrip("/") or "/"
     remote_path = posixpath.join(safe_dir, filename)
-    total_size = len(data)
+    
+    # 确定使用哪种模式
+    if stream is not None:
+        # 流式模式
+        if file_size is None:
+            return False, "流式模式需要提供file_size参数", None, None
+        total_size = file_size
+        file_obj = stream
+    else:
+        # 传统模式（向后兼容）
+        if data is None:
+            return False, "必须提供data或stream参数", None, None
+        total_size = len(data)
+        file_obj = io.BytesIO(data)
     # 根据文件大小动态调整chunk size以提高上传速度
     # 使用更大的chunk size以减少网络往返次数和系统调用开销
     if total_size > 100 * 1024 * 1024:  # >100MB
@@ -248,10 +283,8 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                 with fota_transports_lock:
                     fota_transports[task_id] = {"transport": transport, "sftp": sftp}
             
-            # 使用putfo方法上传，可能比file.write()更高效
-            import io
+            # 使用putfo方法上传，支持流式上传
             import time as time_module
-            file_obj = io.BytesIO(data)
             putfo_start_time = time_module.time()
             putfo_last_log_time = putfo_start_time
             putfo_last_transferred = 0
@@ -318,10 +351,8 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                 with fota_transports_lock:
                     fota_transports[task_id] = {"transport": transport, "sftp": sftp}
             
-            # 使用putfo方法上传，可能比file.write()更高效
-            import io
+            # 使用putfo方法上传，支持流式上传
             import time as time_module
-            file_obj = io.BytesIO(data)
             putfo_start_time = time_module.time()
             putfo_last_log_time = putfo_start_time
             putfo_last_transferred = 0
@@ -474,7 +505,44 @@ def api_upload():
             return jsonify({"ok": False, "error": "未选择文件"}), 400
 
         task_id = str(uuid.uuid4())
-        data = file.read()
+        
+        # 真正的流式上传：使用临时文件，避免将整个文件读入内存
+        import io
+        import tempfile
+        import shutil
+        
+        file_stream = file.stream
+        file_size = request.content_length
+        
+        # 创建临时文件（使用临时文件实现真正的流式处理）
+        temp_file = None
+        temp_file_path = None
+        try:
+            # 创建临时文件
+            temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='upload_', suffix='.tmp')
+            temp_file_path = temp_file.name
+            
+            # 流式保存：从Flask流复制到临时文件（内存占用固定，如8MB缓冲区）
+            shutil.copyfileobj(file_stream, temp_file, length=8*1024*1024)  # 8MB缓冲区
+            temp_file.close()
+            temp_file = None
+            
+            # 如果file_size未知，从临时文件获取
+            if file_size is None:
+                file_size = os.path.getsize(temp_file_path)
+        except Exception as e:
+            # 清理临时文件
+            if temp_file:
+                try:
+                    temp_file.close()
+                except:
+                    pass
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+            raise
         
         with upload_tasks_lock:
             upload_tasks[task_id] = {"progress": 0, "status": "uploading", "result": None}
@@ -486,8 +554,11 @@ def api_upload():
                     upload_tasks[task_id]["progress"] = percent
         
         def do_upload():
+            file_obj = None
             try:
-                ok, info = sftp_upload(server_name, server_ip, port, target_dir, file.filename, data, progress_cb)
+                # 从临时文件打开文件对象用于上传
+                file_obj = open(temp_file_path, 'rb')
+                ok, info = sftp_upload(server_name, server_ip, port, target_dir, file.filename, stream=file_obj, file_size=file_size, progress_callback=progress_cb)
                 with upload_tasks_lock:
                     upload_tasks[task_id] = {
                         "progress": 100,
@@ -502,6 +573,19 @@ def api_upload():
                         "result": {"ok": False, "error": str(e)}
                     }
                 log_srv(f"upload exception: {e}")
+            finally:
+                # 关闭文件对象
+                if file_obj:
+                    try:
+                        file_obj.close()
+                    except:
+                        pass
+                # 清理临时文件
+                if temp_file_path and os.path.exists(temp_file_path):
+                    try:
+                        os.unlink(temp_file_path)
+                    except Exception as cleanup_error:
+                        log_srv(f"清理临时文件失败: {cleanup_error}")
         
         threading.Thread(target=do_upload, daemon=True).start()
         return jsonify({"ok": True, "task_id": task_id})
@@ -568,8 +652,154 @@ def api_fota():
             task_id = str(uuid.uuid4())
             fota_server_locks[server_key] = task_id
 
-        data = file.read()
-        local_md5 = md5_bytes(data, server_name)
+        # 真正的流式上传：使用临时文件，避免将整个文件读入内存
+        import io
+        import time as time_module
+        import tempfile
+        import shutil
+        import os
+        try:
+            import psutil
+            psutil_available = True
+        except ImportError:
+            psutil_available = False
+        
+        
+        file_stream = file.stream
+        file_size = request.content_length
+        
+        
+        # 根据服务器类型选择不同的方案
+        is_8650 = server_name.startswith("LP-8650")
+        
+        
+        # 初始化变量
+        read_duration = 0
+        md5_duration = 0
+        
+        if is_8650:
+            # 8650系列：使用临时文件方案（保存到临时文件时同时计算MD5）
+            temp_file = None
+            temp_file_path = None
+            try:
+                # 创建临时文件
+                temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='fota_upload_', suffix='.tmp')
+                temp_file_path = temp_file.name
+                
+                
+                # 使用tee流，在保存到临时文件的同时计算MD5（只需读取一次）
+                read_start_time = time_module.time()
+                tee_stream, md5_calculator = create_tee_stream(file_stream, temp_file, server_name, file_size)
+                
+                
+                # 流式保存：从Flask流复制到临时文件，同时计算MD5（内存占用固定，如8MB缓冲区）
+                # 注意：tee_stream.read()已经将数据写入temp_file，不需要再次write
+                bytes_copied = 0
+                chunk_size = 8*1024*1024  # 8MB缓冲区
+                while True:
+                    chunk = tee_stream.read(chunk_size)
+                    if not chunk:
+                        break
+                    # tee_stream.read()已经将chunk写入temp_file，不需要再次write
+                    bytes_copied += len(chunk)
+                
+                
+                # 获取MD5值（在保存过程中已计算）
+                local_md5 = md5_calculator.get_md5()
+                
+                temp_file.close()
+                temp_file = None
+                read_duration = time_module.time() - read_start_time
+                
+                # 获取实际文件大小（从临时文件）
+                actual_file_size = os.path.getsize(temp_file_path)
+                
+                
+                # 检查文件是否完整读取
+                if bytes_copied != file_size:
+                    # 文件未完全读取，使用实际读取的字节数更新file_size（用于后续上传）
+                    log_fota(f"[{server_name}/{server_ip}:{port}] 警告：文件未完全读取，期望={file_size}，实际={bytes_copied}，差异={file_size - bytes_copied}字节")
+                    # 注意：MD5已经使用bytes_read计算，所以这里只需要更新file_size用于上传
+                    file_size = bytes_copied  # 使用实际读取的字节数
+                
+                # 验证actual_file_size应该等于bytes_copied（数据只写入一次）
+                if actual_file_size != bytes_copied:
+                    log_fota(f"[{server_name}/{server_ip}:{port}] 错误：临时文件大小异常，bytes_copied={bytes_copied}，actual_file_size={actual_file_size}，差异={actual_file_size - bytes_copied}字节")
+                    # 使用bytes_copied作为实际文件大小
+                    actual_file_size = bytes_copied
+                
+                
+                md5_duration = read_duration  # MD5计算时间包含在读取时间内
+                
+                # 创建文件对象用于上传（从临时文件打开）
+                file_obj = open(temp_file_path, 'rb')
+                upload_stream = None  # 8650不使用边上传边计算
+                upload_md5_stream = None  # 8650不使用边上传边计算
+            except Exception as e:
+                # 清理临时文件
+                if temp_file:
+                    try:
+                        temp_file.close()
+                    except:
+                        pass
+                if temp_file_path and os.path.exists(temp_file_path):
+                    try:
+                        os.unlink(temp_file_path)
+                    except:
+                        pass
+                raise
+        else:
+            # 8797系列：也使用临时文件方案，但边上传边计算MD5（Flask流只能读取一次）
+            temp_file = None
+            temp_file_path = None
+            try:
+                # 创建临时文件
+                temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='fota_upload_', suffix='.tmp')
+                temp_file_path = temp_file.name
+                
+                
+                # 流式保存：从Flask流复制到临时文件（内存占用固定，如8MB缓冲区）
+                read_start_time = time_module.time()
+                bytes_copied = 0
+                chunk_size = 8*1024*1024  # 8MB缓冲区
+                while True:
+                    chunk = file_stream.read(chunk_size)
+                    if not chunk:
+                        break
+                    temp_file.write(chunk)
+                    bytes_copied += len(chunk)
+                
+                temp_file.close()
+                temp_file = None
+                read_duration = time_module.time() - read_start_time
+                
+                # 如果file_size未知，从临时文件获取
+                if file_size is None:
+                    file_size = os.path.getsize(temp_file_path)
+                
+                
+                # 创建文件对象用于上传（从临时文件打开）
+                file_obj = open(temp_file_path, 'rb')
+                # 创建MD5计算包装流，边上传边计算MD5
+                upload_md5_stream = create_md5_calculating_stream(file_obj, server_name, file_size)
+                upload_stream = upload_md5_stream  # 8797使用边上传边计算
+                
+                local_md5 = None  # 8797的MD5在上传完成后获取
+                
+            except Exception as e:
+                # 清理临时文件
+                if temp_file:
+                    try:
+                        temp_file.close()
+                    except:
+                        pass
+                if temp_file_path and os.path.exists(temp_file_path):
+                    try:
+                        os.unlink(temp_file_path)
+                    except:
+                        pass
+                raise
+        
         remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
 
         with fota_tasks_lock:
@@ -583,7 +813,7 @@ def api_fota():
                 if avg_md5:
                     estimated_time = f"（预估 {int(avg_md5 / 60)} 分钟）"
             elif status == "uploading":
-                avg_upload = get_avg_fota_timing("file_upload", len(data))
+                avg_upload = get_avg_fota_timing("file_upload", file_size)
                 if avg_upload:
                     estimated_time = f"（预估 {int(avg_upload / 60)} 分钟）"
             elif status == "upgrading":
@@ -606,14 +836,20 @@ def api_fota():
 
         def do_fota():
             try:
-                log_fota(f"[{server_name}/{server_ip}:{port}] 开始FOTA，文件={filename}，本地MD5={local_md5}")
+                # 初始化性能监控变量（使用nonlocal访问外层作用域的变量）
+                nonlocal md5_duration, local_md5, file_obj, upload_stream, upload_md5_stream
+                
+                # 根据服务器类型记录不同的日志
+                if is_8650:
+                    log_fota(f"[{server_name}/{server_ip}:{port}] 开始FOTA（8650临时文件方案），文件={filename}，本地MD5={local_md5}，文件大小={file_size}")
+                else:
+                    log_fota(f"[{server_name}/{server_ip}:{port}] 开始FOTA（8797边上传边计算方案），文件={filename}，文件大小={file_size}")
+                # 对于8650，local_md5已在保存临时文件时计算
+                # 对于8797，local_md5在上传完成后计算
+                # 如果文件不存在，md5_duration保持为本地MD5计算的耗时（8650）或0（8797）
+                # 如果文件存在，会在后面更新为远端MD5计算的耗时
 
                 # 验证文件名是否包含对应端口的正确值（在检查文件存在前）
-                # #region agent log
-                import json
-                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:606","message":"文件名验证入口","data":{"fota_filename_validation":str(fota_filename_validation),"fota_filename_validation_type":str(type(fota_filename_validation)),"fota_filename_validation_bool":bool(fota_filename_validation) if fota_filename_validation else False,"server_name":server_name,"port":port,"filename":filename},"timestamp":int(time.time()*1000)}) + '\n')
-                # #endregion
                 if fota_filename_validation:
                     # 确定服务器类型（LP-8650 或 LP-8797）
                     server_type = None
@@ -621,38 +857,15 @@ def api_fota():
                         server_type = "LP-8650"
                     elif server_name.startswith("LP-8797"):
                         server_type = "LP-8797"
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"B","location":"web_ui.py:613","message":"服务器类型判断","data":{"server_name":server_name,"server_type":server_type,"fota_filename_validation_keys":list(fota_filename_validation.keys()) if fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
                     if server_type and server_type in fota_filename_validation:
                         port_str = str(port)
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"C","location":"web_ui.py:616","message":"端口匹配检查","data":{"port":port,"port_str":port_str,"server_type":server_type,"fota_filename_validation_server_type":fota_filename_validation[server_type] if server_type in fota_filename_validation else None,"port_keys":list(fota_filename_validation[server_type].keys()) if server_type in fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         if port_str in fota_filename_validation[server_type]:
                             expected_value = fota_filename_validation[server_type][port_str]
-                            # #region agent log
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"D","location":"web_ui.py:618","message":"文件名验证检查","data":{"expected_value":expected_value,"filename":filename,"expected_in_filename":expected_value in filename},"timestamp":int(time.time()*1000)}) + '\n')
-                            # #endregion
                             if expected_value not in filename:
                                 error_msg = f"选择的文件不对，请选择对应文件：{expected_value}（{server_type} 端口{port}）"
                                 log_fota(f"[{server_name}/{server_ip}:{port}] {error_msg}，当前文件名={filename}")
                                 update_fota_progress(0, "error", error_msg)
-                                # #region agent log
-                                import json
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    task_info = fota_tasks.get(task_id, {})
-                                    f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"H","location":"web_ui.py:638","message":"单个FOTA设置文件名验证错误后","data":{"task_id":task_id,"error_msg":error_msg,"task_status":task_info.get("status"),"task_step":task_info.get("step"),"task_result":str(task_info.get("result"))},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
                                 return
-                else:
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:622","message":"fota_filename_validation为空，跳过验证","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
                 
                 # 步骤1：检查文件是否存在 (0-10%)
                 update_fota_progress(5, "checking", "检查远端文件是否存在...")
@@ -667,22 +880,44 @@ def api_fota():
                     update_fota_progress(15, "md5", "计算远端文件MD5...")
                     md5_start_time = time.time()
                     ok_md5_pre, r_md5_pre = remote_md5(server_name, server_ip, port, remote_path)
-                    md5_duration = time.time() - md5_start_time
+                    md5_duration = time.time() - md5_start_time  # 更新外层作用域的变量（已在函数开始处声明nonlocal）
                     record_fota_timing("md5_calculation", md5_duration)
                     if ok_md5_pre:
-                        update_fota_progress(25, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5_pre[:8]}...")
-                        if r_md5_pre == local_md5:
-                            # MD5匹配，跳过上传，使用已获取的MD5值
-                            log_fota(f"[{server_name}/{server_ip}:{port}] 远端已存在且MD5一致，跳过上传，远端MD5={r_md5_pre}")
-                            need_upload = False
-                            r_md5 = r_md5_pre  # 保存已获取的MD5值
-                            update_fota_progress(30, "md5", f"MD5一致，跳过上传")
-                        else:
-                            # MD5不匹配，删除后上传
-                            log_fota(f"[{server_name}/{server_ip}:{port}] 远端已有同名文件，MD5不同，远端MD5={r_md5_pre}，删除后重传")
-                            update_fota_progress(28, "md5", "MD5不一致，删除旧文件...")
-                            remote_remove(server_name, server_ip, port, remote_path)
-                            need_upload = True
+                            # 对于8797，如果文件存在，需要先上传才能计算本地MD5
+                            # 所以8797在文件存在时，总是需要上传
+                            if is_8650:
+                                # 8650：直接比较本地MD5和远端MD5
+                                update_fota_progress(25, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5_pre[:8]}...")
+                                if r_md5_pre == local_md5:
+                                    # MD5匹配，跳过上传，使用已获取的MD5值
+                                    log_fota(f"[{server_name}/{server_ip}:{port}] 远端已存在且MD5一致，跳过上传，远端MD5={r_md5_pre}")
+                                    need_upload = False
+                                    r_md5 = r_md5_pre  # 保存已获取的MD5值
+                                    update_fota_progress(30, "md5", f"MD5一致，跳过上传")
+                                    # 跳过上传时，立即清理临时文件
+                                    if 'file_obj' in locals() and file_obj:
+                                        try:
+                                            file_obj.close()
+                                            file_obj = None
+                                        except:
+                                            pass
+                                    if 'temp_file_path' in locals() and temp_file_path:
+                                        try:
+                                            if os.path.exists(temp_file_path):
+                                                os.unlink(temp_file_path)
+                                        except Exception as cleanup_error:
+                                            log_srv(f"清理临时文件失败: {cleanup_error}")
+                                else:
+                                    # MD5不匹配，删除后上传
+                                    log_fota(f"[{server_name}/{server_ip}:{port}] 远端已有同名文件，MD5不同，远端MD5={r_md5_pre}，删除后重传")
+                                    update_fota_progress(28, "md5", "MD5不一致，删除旧文件...")
+                                    remote_remove(server_name, server_ip, port, remote_path)
+                                    need_upload = True
+                            else:
+                                # 8797：文件存在时，总是需要上传（因为需要边上传边计算MD5）
+                                log_fota(f"[{server_name}/{server_ip}:{port}] 8797文件存在，需要上传以计算本地MD5")
+                                update_fota_progress(28, "md5", "文件存在，需要上传...")
+                                need_upload = True
                     else:
                         # MD5获取失败，删除后上传
                         log_fota(f"[{server_name}/{server_ip}:{port}] 远端已有同名文件，MD5获取失败: {r_md5_pre}，删除后重传")
@@ -691,6 +926,7 @@ def api_fota():
                         need_upload = True
                 else:
                     update_fota_progress(10, "checking", "远端文件不存在，需要上传")
+                    # 文件不存在时，md5_duration保持为0（已在函数开始时初始化）
 
                 # 步骤3：上传文件（如果需要）(30-80%)
                 if need_upload:
@@ -701,9 +937,34 @@ def api_fota():
                     
                     update_fota_progress(30, "uploading", "开始上传文件...")
                     upload_start_time = time.time()
-                    ok, info = sftp_upload(server_name, server_ip, port, fota_target_dir, filename, data, upload_progress_cb)
+                    
+                    # 根据服务器类型选择不同的上传方式
+                    if is_8650:
+                        # 8650：从临时文件上传
+                        file_obj.seek(0)
+                        ok, info = sftp_upload(server_name, server_ip, port, fota_target_dir, filename, stream=file_obj, file_size=file_size, progress_callback=upload_progress_cb)
+                    else:
+                        # 8797：使用边上传边计算MD5的流上传（从临时文件）
+                        # 重置文件对象位置，然后创建MD5计算流
+                        file_obj.seek(0)
+                        upload_md5_stream = create_md5_calculating_stream(file_obj, server_name, file_size)
+                        upload_stream = upload_md5_stream
+                        ok, info = sftp_upload(server_name, server_ip, port, fota_target_dir, filename, stream=upload_stream, file_size=file_size, progress_callback=upload_progress_cb)
+                        # 上传完成后获取MD5值
+                        local_md5 = upload_md5_stream.get_md5()
+                        log_fota(f"[{server_name}/{server_ip}:{port}] 上传完成，本地MD5={local_md5}")
                     upload_duration = time.time() - upload_start_time
-                    record_fota_timing("file_upload", upload_duration, len(data))
+                    record_fota_timing("file_upload", upload_duration, file_size)
+                    
+                    
+                    # 关闭文件对象（8650和8797都需要，因为都使用了临时文件）
+                    if 'file_obj' in locals() and file_obj:
+                        try:
+                            file_obj.close()
+                            file_obj = None
+                        except:
+                            pass
+                    
                     if not ok:
                         log_fota(f"[{server_name}/{server_ip}:{port}] SCP失败: {info}")
                         with fota_tasks_lock:
@@ -730,6 +991,7 @@ def api_fota():
 
                     log_fota(f"[{server_name}/{server_ip}:{port}] 上传后MD5校验，本地={local_md5} 远端={r_md5}")
                     update_fota_progress(85, "md5", f"MD5校验: 本地={local_md5[:8]}... 远端={r_md5[:8]}...")
+                    
 
                     if local_md5 != r_md5:
                         log_fota(f"[{server_name}/{server_ip}:{port}] MD5不一致，本地={local_md5} 远端={r_md5}")
@@ -777,6 +1039,23 @@ def api_fota():
                 with fota_tasks_lock:
                     fota_tasks[task_id] = {"progress": 100, "status": "error", "step": f"服务器异常: {e}", "result": {"ok": False, "error": f"服务器异常: {e}"}}
             finally:
+                # 清理临时文件和流（8650和8797都使用临时文件）
+                if 'file_obj' in locals() and file_obj:
+                    try:
+                        file_obj.close()
+                    except:
+                        pass
+                if 'upload_md5_stream' in locals() and upload_md5_stream:
+                    try:
+                        upload_md5_stream.close()
+                    except:
+                        pass
+                if 'temp_file_path' in locals() and temp_file_path:
+                    try:
+                        if os.path.exists(temp_file_path):
+                            os.unlink(temp_file_path)
+                    except Exception as cleanup_error:
+                        log_srv(f"清理临时文件失败: {cleanup_error}")
                 # 释放服务器锁
                 with fota_server_locks_lock:
                     if server_key in fota_server_locks and fota_server_locks[server_key] == task_id:
@@ -840,14 +1119,60 @@ def api_batch_fota():
 
         filename = file.filename
 
-        # 读取文件数据
-        data = file.read()
-        # 批量FOTA时，需要为每个服务器单独计算MD5（因为可能有8650和8797混合）
-        # 这里先计算一个通用的MD5，实际使用时会在每个任务中根据服务器类型重新计算
-        # 但为了兼容性，先使用第一个服务器的类型
-        first_server_name = servers[0].get("name", "") if servers else ""
-        local_md5 = md5_bytes(data, first_server_name)
-        remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
+        # 真正的流式上传：使用临时文件，避免将整个文件读入内存
+        import io
+        import tempfile
+        import shutil
+        
+        file_stream = file.stream
+        file_size = request.content_length
+        
+        # 创建临时文件（使用临时文件实现真正的流式处理）
+        temp_file = None
+        temp_file_path = None
+        try:
+            # 创建临时文件
+            temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='batch_fota_upload_', suffix='.tmp')
+            temp_file_path = temp_file.name
+            
+            # 流式保存：从Flask流复制到临时文件（内存占用固定，如8MB缓冲区）
+            shutil.copyfileobj(file_stream, temp_file, length=8*1024*1024)  # 8MB缓冲区
+            temp_file.close()
+            temp_file = None
+            
+            # 获取实际文件大小（从临时文件）
+            actual_file_size = os.path.getsize(temp_file_path)
+            
+            # 如果file_size未知，使用实际文件大小
+            if file_size is None:
+                file_size = actual_file_size
+            else:
+                # 如果file_size与实际文件大小不一致，使用实际文件大小（用于MD5计算）
+                if file_size != actual_file_size:
+                    log_fota(f"[批量FOTA] 警告：文件大小不一致，期望={file_size}，实际={actual_file_size}，使用实际大小计算MD5")
+                    file_size = actual_file_size  # 使用实际文件大小
+            
+            # 批量FOTA时，需要为每个服务器单独计算MD5（因为可能有8650和8797混合）
+            # 这里先计算一个通用的MD5，实际使用时会在每个任务中根据服务器类型重新计算
+            # 但为了兼容性，先使用第一个服务器的类型
+            first_server_name = servers[0].get("name", "") if servers else ""
+            # 从临时文件计算MD5（支持seek），使用实际文件大小
+            with open(temp_file_path, 'rb') as temp_file_obj:
+                local_md5 = md5_stream(temp_file_obj, first_server_name, file_size)
+            remote_path = f"{fota_target_dir.rstrip('/')}/{filename}"
+        except Exception as e:
+            # 清理临时文件
+            if temp_file:
+                try:
+                    temp_file.close()
+                except:
+                    pass
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+            raise
 
         # 创建批量任务
         batch_id = str(uuid.uuid4())
@@ -861,7 +1186,8 @@ def api_batch_fota():
                 "completed": 0,
                 "port": port,
                 "filename": filename,
-                "cancelled": False
+                "cancelled": False,
+                "temp_file_path": temp_file_path  # 保存临时文件路径，用于后续清理
             }
 
         # 为每个服务器创建FOTA任务
@@ -914,15 +1240,14 @@ def api_batch_fota():
                             return
                     
                     # 根据服务器类型重新计算本地MD5（确保与远端MD5计算方式一致）
-                    server_local_md5 = md5_bytes(data, sname)
-                    log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 开始FOTA，文件={filename}，本地MD5={server_local_md5}")
+                    # 获取实际文件大小（从临时文件）
+                    actual_file_size = os.path.getsize(temp_file_path)
+                    # 使用实际文件大小计算MD5（确保与远端MD5计算一致）
+                    with open(temp_file_path, 'rb') as temp_file_obj:
+                        server_local_md5 = md5_stream(temp_file_obj, sname, actual_file_size)
+                    log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 开始FOTA，文件={filename}，本地MD5={server_local_md5}，文件大小={actual_file_size}（实际大小）")
 
                     # 验证文件名是否包含对应端口的正确值（在检查文件存在前）
-                    # #region agent log
-                    import json
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:888","message":"批量FOTA文件名验证入口","data":{"fota_filename_validation":str(fota_filename_validation),"fota_filename_validation_type":str(type(fota_filename_validation)),"fota_filename_validation_bool":bool(fota_filename_validation) if fota_filename_validation else False,"server_name":sname,"port":port,"filename":filename},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
                     if fota_filename_validation:
                         # 确定服务器类型（LP-8650 或 LP-8797）
                         server_type = None
@@ -930,22 +1255,10 @@ def api_batch_fota():
                             server_type = "LP-8650"
                         elif sname.startswith("LP-8797"):
                             server_type = "LP-8797"
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"B","location":"web_ui.py:895","message":"批量FOTA服务器类型判断","data":{"server_name":sname,"server_type":server_type,"fota_filename_validation_keys":list(fota_filename_validation.keys()) if fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         if server_type and server_type in fota_filename_validation:
                             port_str = str(port)
-                            # #region agent log
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"C","location":"web_ui.py:898","message":"批量FOTA端口匹配检查","data":{"port":port,"port_str":port_str,"server_type":server_type,"fota_filename_validation_server_type":fota_filename_validation[server_type] if server_type in fota_filename_validation else None,"port_keys":list(fota_filename_validation[server_type].keys()) if server_type in fota_filename_validation else []},"timestamp":int(time.time()*1000)}) + '\n')
-                            # #endregion
                             if port_str in fota_filename_validation[server_type]:
                                 expected_value = fota_filename_validation[server_type][port_str]
-                                # #region agent log
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"D","location":"web_ui.py:900","message":"批量FOTA文件名验证检查","data":{"expected_value":expected_value,"filename":filename,"expected_in_filename":expected_value in filename},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
                                 if expected_value not in filename:
                                     error_msg = f"选择的文件不对，请选择对应文件：{expected_value}（{server_type} 端口{port}）"
                                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] {error_msg}，当前文件名={filename}")
@@ -955,11 +1268,6 @@ def api_batch_fota():
                                             fota_tasks[tid]["status"] = "error"
                                             fota_tasks[tid]["step"] = error_msg
                                     return
-                    else:
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"web_ui.py:908","message":"批量FOTA fota_filename_validation为空，跳过验证","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
 
                     def update_fota_progress(progress, status, step):
                         # 获取预估耗时
@@ -969,7 +1277,7 @@ def api_batch_fota():
                             if avg_md5:
                                 estimated_time = f"（预估 {int(avg_md5 / 60)} 分钟）"
                         elif status == "uploading":
-                            avg_upload = get_avg_fota_timing("file_upload", len(data))
+                            avg_upload = get_avg_fota_timing("file_upload", file_size)
                             if avg_upload:
                                 estimated_time = f"（预估 {int(avg_upload / 60)} 分钟）"
                         elif status == "upgrading":
@@ -1075,11 +1383,17 @@ def api_batch_fota():
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
                         upload_start_time = time.time()
-                        ok, info, transport_ref, sftp_ref = sftp_upload_with_cancel(
-                            sname, sip, port, fota_target_dir, filename, data, upload_progress_cb, batch_id, tid
-                        )
+                        # 从临时文件打开文件对象用于上传（每个任务都需要独立的文件对象）
+                        # 使用实际文件大小上传（确保与MD5计算一致）
+                        task_file_obj = open(temp_file_path, 'rb')
+                        try:
+                            ok, info, transport_ref, sftp_ref = sftp_upload_with_cancel(
+                                sname, sip, port, fota_target_dir, filename, stream=task_file_obj, file_size=actual_file_size, progress_callback=upload_progress_cb, batch_id=batch_id, task_id=tid
+                            )
+                        finally:
+                            task_file_obj.close()
                         upload_duration = time.time() - upload_start_time
-                        record_fota_timing("file_upload", upload_duration, len(data))
+                        record_fota_timing("file_upload", upload_duration, file_size)
                         if transport_ref:
                             transport = transport_ref
                         if sftp_ref:
@@ -1148,10 +1462,12 @@ def api_batch_fota():
                         
                         # 等待文件完全写入磁盘（特别是8650系列使用SFTP读取时）
                         time.sleep(1.0)  # 等待1秒确保文件完全写入
+                        
                         md5_start_time = time.time()
                         ok_md5, r_md5 = remote_md5(sname, sip, port, remote_path)
                         md5_duration = time.time() - md5_start_time
                         record_fota_timing("md5_calculation", md5_duration)
+                        
                         
                         # 检查是否已取消
                         with batch_fota_tasks_lock:
@@ -1333,6 +1649,14 @@ def api_batch_fota():
                                         batch_fota_tasks[batch_id]["status"] = "error"
                                     else:
                                         batch_fota_tasks[batch_id]["status"] = "done"
+                                    # 清理临时文件（所有任务完成后）
+                                    temp_path = batch_fota_tasks[batch_id].get("temp_file_path")
+                                    if temp_path and os.path.exists(temp_path):
+                                        try:
+                                            os.unlink(temp_path)
+                                            log_srv(f"[批量FOTA] 清理临时文件: {temp_path}")
+                                        except Exception as cleanup_error:
+                                            log_srv(f"[批量FOTA] 清理临时文件失败: {cleanup_error}")
 
             threading.Thread(target=do_batch_fota, args=(task_id, server_name, server_ip, server_key), daemon=True).start()
 
@@ -1344,6 +1668,12 @@ def api_batch_fota():
         log_fota(f"[批量FOTA] 创建批量任务 {batch_id}，共 {len(task_ids)} 个服务器，端口 {port}")
         return jsonify({"ok": True, "batch_id": batch_id, "total": len(task_ids)})
     except Exception as e:
+        # 清理临时文件（如果创建失败）
+        if 'temp_file_path' in locals() and temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
         log_fota(f"批量FOTA异常: {e}")
         log_srv(f"批量FOTA异常: {e}")
         return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
@@ -1473,12 +1803,17 @@ def index():
     table { width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0; }
     th, td { padding: 10px 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid #eaeef4; }
     th { font-weight: 600; color: #374151; background: #f8fafc; position: sticky; top: 0; z-index: 1; border-bottom: 1px solid #d9e2ec; }
+    th.col-checkbox { z-index: 5; }
+    th.col-status { z-index: 4; }
+    th.col-name { z-index: 4; }
+    th.col-ip { z-index: 4; }
     tr:hover td { background: #eef2ff; }
     tr:hover td.col-checkbox, tr:hover td.col-status, tr:hover td.col-name, tr:hover td.col-ip { background: #eef2ff; }
     th + th, td + td { border-left: 1px solid #f0f2f6; }
     th.col-checkbox, td.col-checkbox { position: sticky; left: 0; z-index: 4; width: 50px; min-width: 50px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05); text-align: center; }
-    th.col-name, td.col-name { position: sticky; left: 50px; z-index: 3; min-width: 150px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05); }
-    th.col-ip, td.col-ip { position: sticky; left: 200px; z-index: 3; min-width: 150px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05); }
+    th.col-status, td.col-status { position: sticky; left: 50px; z-index: 3; min-width: 80px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05); }
+    th.col-name, td.col-name { position: sticky; left: 130px; z-index: 3; min-width: 150px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05); }
+    th.col-ip, td.col-ip { position: sticky; left: 280px; z-index: 3; min-width: 150px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05); }
     .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
     .ok { background: #dcfce7; color: #166534; }
     .warn { background: #fee2e2; color: #991b1b; }
@@ -1516,9 +1851,9 @@ def index():
           <thead>
             <tr>
               <th class="col-checkbox"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-              <th class="col-status" style="position: sticky; left: 50px; z-index: 3; min-width: 80px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05);">状态</th>
-              <th class="col-name" style="position: sticky; left: 130px; z-index: 3; min-width: 150px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05);">名称</th>
-              <th class="col-ip" style="position: sticky; left: 280px; z-index: 3; min-width: 150px; background: #f8fafc; box-shadow: 2px 0 6px rgba(15,23,42,0.05);">IP</th>
+              <th class="col-status">状态</th>
+              <th class="col-name">名称</th>
+              <th class="col-ip">IP</th>
               <th>智驾域(22)</th>
               <th>智驾域SSH</th>
               <th>智驾域详情</th>
@@ -2299,11 +2634,6 @@ def start_background():
 
 if __name__ == "__main__":
     load_config()  # 读取配置
-    # #region agent log
-    import json
-    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"E","location":"web_ui.py:2289","message":"load_config调用后检查fota_filename_validation","data":{"fota_filename_validation":str(fota_filename_validation),"fota_filename_validation_type":str(type(fota_filename_validation))},"timestamp":int(time.time()*1000)}) + '\n')
-    # #endregion
     # 初始化一次数据
     try:
         status_cache["data"] = run_checks_once()

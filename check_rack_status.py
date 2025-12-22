@@ -180,12 +180,46 @@ def ensure_remote_dir(sftp: paramiko.SFTPClient, remote_path: str):
             sftp.mkdir(current)
 
 
-def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename: str, data: bytes, progress_callback=None):
-    """将文件上传到指定服务器和端口，支持进度回调"""
+def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename: str, data=None, progress_callback=None, stream=None, file_size=None):
+    """将文件上传到指定服务器和端口，支持进度回调
+    支持两种模式：
+    1. 传统模式：data参数（bytes），向后兼容
+    2. 流式模式：stream参数（文件流），file_size参数（文件大小）
+    
+    Args:
+        server_name: 服务器名称
+        ip: 服务器IP
+        port: 端口
+        target_dir: 目标目录
+        filename: 文件名
+        data: 文件数据（bytes），传统模式
+        progress_callback: 进度回调函数
+        stream: 文件流对象，流式模式
+        file_size: 文件大小（字节），流式模式必需
+    """
+    import io
+    
     auth_mode = resolve_auth_mode(server_name)
     safe_dir = target_dir.rstrip("/") or "/"
     remote_path = posixpath.join(safe_dir, filename)
-    total_size = len(data)
+    
+    # 确定使用哪种模式
+    if stream is not None:
+        # 流式模式
+        if file_size is None:
+            return False, "流式模式需要提供file_size参数"
+        total_size = file_size
+        # 如果流不支持seek，需要先读取到BytesIO（但这样会占用内存）
+        # 为了真正的流式上传，我们假设流支持read但不一定支持seek
+        # 如果流不支持seek，putfo会直接读取流
+        file_obj = stream
+    else:
+        # 传统模式（向后兼容）
+        if data is None:
+            return False, "必须提供data或stream参数"
+        total_size = len(data)
+        file_obj = io.BytesIO(data)
+    
     # 根据文件大小动态调整chunk size以提高上传速度
     # 使用更大的chunk size以减少网络往返次数和系统调用开销
     if total_size > 100 * 1024 * 1024:  # >100MB
@@ -195,30 +229,10 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
     else:
         chunk_size = 1024 * 1024  # 1MB
 
-    def write_with_progress(f, data_bytes):
-        written = 0
-        start_time = time.time()
-        last_log_time = start_time
-        last_log_bytes = 0
-        
-        while written < total_size:
-            chunk_start_time = time.time()
-            chunk = data_bytes[written:written + chunk_size]
-            f.write(chunk)
-            chunk_end_time = time.time()
-            written += len(chunk)
-            
-            # 每5秒记录一次上传速度和进度
-            current_time = time.time()
-            if current_time - last_log_time >= 5.0:
-                elapsed = current_time - start_time
-                speed = written / elapsed if elapsed > 0 else 0
-                recent_speed = (written - last_log_bytes) / (current_time - last_log_time) if (current_time - last_log_time) > 0 else 0
-                last_log_time = current_time
-                last_log_bytes = written
-            
-            if progress_callback:
-                progress_callback(written, total_size)
+    
+    def putfo_progress_callback(transferred, total):
+        if progress_callback:
+            progress_callback(transferred, total)
 
     if auth_mode == "none":
         try:
@@ -226,18 +240,11 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
             transport = paramiko.Transport(sock)
             transport.start_client(timeout=ssh_timeout)
             transport.auth_none(ssh_username)
-
+            
             sftp = paramiko.SFTPClient.from_transport(transport)
             ensure_remote_dir(sftp, safe_dir)
             
-            # 使用putfo方法上传，可能比file.write()更高效
-            import io
-            file_obj = io.BytesIO(data)
-            
-            def putfo_progress_callback(transferred, total):
-                if progress_callback:
-                    progress_callback(transferred, total)
-            
+            # 使用putfo方法上传，支持流式上传
             sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             sftp.close()
             transport.close()
@@ -258,14 +265,7 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         sftp = paramiko.SFTPClient.from_transport(transport)
         ensure_remote_dir(sftp, safe_dir)
         
-        # 使用putfo方法上传，可能比file.write()更高效
-        import io
-        file_obj = io.BytesIO(data)
-        
-        def putfo_progress_callback(transferred, total):
-            if progress_callback:
-                progress_callback(transferred, total)
-        
+        # 使用putfo方法上传，支持流式上传
         sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
         sftp.close()
         transport.close()
@@ -332,7 +332,8 @@ def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
                         if chunk:
                             md5_hash.update(chunk)
                     
-                    # 4. 将文件大小也加入MD5计算，增加唯一性
+                    # 4. 将实际文件大小也加入MD5计算，增加唯一性
+                    # 注意：这里使用file_stat.st_size（实际文件大小），确保与本地MD5计算一致
                     md5_hash.update(str(file_size).encode())
                 
                 md5_val = md5_hash.hexdigest()
@@ -603,6 +604,414 @@ def md5_bytes_sampled(data: bytes) -> str:
     md5_hash.update(str(data_len).encode())
     
     return md5_hash.hexdigest()
+
+
+def md5_stream(stream, server_name: str = None, file_size: int = None) -> str:
+    """从文件流计算MD5值（流式版本）
+    对于8650系列使用采样MD5（部分计算）以加快速度
+    对于8797系列使用完整MD5计算
+    
+    Args:
+        stream: 文件流对象（支持read，可选支持seek）
+        server_name: 服务器名称，用于判断使用哪种MD5计算方式
+        file_size: 文件大小（字节），如果为None则从流中获取
+    """
+    import hashlib
+    import io
+    
+    # 如果流不支持seek，使用流式MD5计算（完整读取）
+    if not hasattr(stream, 'seek') or not hasattr(stream, 'tell'):
+        # 流式MD5计算（不支持seek的流，只能完整读取）
+        return md5_stream_noseek(stream, server_name, file_size)
+    
+    # 保存当前位置
+    try:
+        original_pos = stream.tell()
+    except:
+        original_pos = 0
+    
+    try:
+        # 获取文件大小
+        if file_size is None:
+            try:
+                stream.seek(0, io.SEEK_END)
+                file_size = stream.tell()
+                stream.seek(0)
+            except:
+                # 如果无法seek，需要完整读取
+                return md5_stream_noseek(stream, server_name, file_size)
+        
+        # 如果指定了服务器名称且是8650系列，使用采样MD5
+        if server_name and server_name.startswith("LP-8650"):
+            return md5_stream_sampled(stream, file_size)
+        else:
+            # 8797系列或其他情况使用完整MD5
+            stream.seek(0)
+            md5_hash = hashlib.md5()
+            chunk_size = 8 * 1024 * 1024  # 8MB chunks for efficiency
+            while True:
+                chunk = stream.read(chunk_size)
+                if not chunk:
+                    break
+                md5_hash.update(chunk)
+            return md5_hash.hexdigest()
+    finally:
+        # 恢复原始位置
+        try:
+            stream.seek(original_pos)
+        except:
+            pass
+
+
+def md5_stream_noseek(stream, server_name: str = None, file_size: int = None) -> str:
+    """从不可seek的流计算MD5值（流式版本）
+    对于8650系列使用采样MD5（部分计算）以加快速度
+    对于8797系列使用完整MD5计算
+    
+    Args:
+        stream: 文件流对象（只支持read，不支持seek）
+        server_name: 服务器名称，用于判断使用哪种MD5计算方式
+        file_size: 文件大小（字节），如果为None则从流中读取直到结束
+    """
+    import hashlib
+    
+    # 如果指定了服务器名称且是8650系列，使用采样MD5
+    if server_name and server_name.startswith("LP-8650"):
+        return md5_stream_noseek_sampled(stream, file_size)
+    else:
+        # 8797系列或其他情况使用完整MD5
+        md5_hash = hashlib.md5()
+        chunk_size = 8 * 1024 * 1024  # 8MB chunks for efficiency
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            md5_hash.update(chunk)
+        return md5_hash.hexdigest()
+
+
+def md5_stream_noseek_sampled(stream, file_size: int = None) -> str:
+    """从不可seek的流使用采样方式计算MD5（部分计算），用于8650系列
+    由于流不支持seek，需要完整读取并缓存采样部分
+    
+    Args:
+        stream: 文件流对象（只支持read，不支持seek）
+        file_size: 文件大小（字节），如果为None则从流中读取直到结束
+    """
+    import hashlib
+    
+    # 采样大小：每个采样点读取1MB
+    sample_size = 1024 * 1024  # 1MB
+    
+    # 如果文件大小未知，需要先读取整个流
+    if file_size is None:
+        # 读取整个流到内存（对于不支持seek的流，这是必要的）
+        data = stream.read()
+        file_size = len(data)
+        return md5_bytes_sampled(data)
+    
+    # 如果文件很小（<10MB），直接计算完整MD5
+    if file_size < 10 * 1024 * 1024:
+        md5_hash = hashlib.md5()
+        chunk_size = 8 * 1024 * 1024  # 8MB chunks
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            md5_hash.update(chunk)
+        return md5_hash.hexdigest()
+    
+    # 对于大文件，需要缓存采样部分
+    md5_hash = hashlib.md5()
+    samples = {}  # 存储采样位置的数据
+    current_pos = 0
+    
+    # 需要读取的位置
+    read_positions = [
+        0,  # 开头
+        (file_size - sample_size) // 2,  # 中间
+        file_size - sample_size  # 结尾
+    ]
+    
+    # 读取整个流，提取采样部分
+    chunk_size = 8 * 1024 * 1024  # 8MB chunks
+    while True:
+        chunk = stream.read(chunk_size)
+        if not chunk:
+            break
+        
+        chunk_start = current_pos
+        chunk_end = current_pos + len(chunk)
+        
+        # 检查这个chunk是否包含需要采样的位置
+        for pos in read_positions:
+            if pos >= chunk_start and pos < chunk_end:
+                # 提取采样部分
+                offset_in_chunk = pos - chunk_start
+                sample_data = chunk[offset_in_chunk:offset_in_chunk + sample_size]
+                if len(sample_data) > 0:
+                    samples[pos] = sample_data
+        
+        current_pos = chunk_end
+    
+    # 按顺序更新MD5
+    for pos in sorted(samples.keys()):
+        md5_hash.update(samples[pos])
+    
+    # 将文件大小也加入MD5计算
+    md5_hash.update(str(file_size).encode())
+    
+    return md5_hash.hexdigest()
+
+
+def md5_stream_sampled(stream, file_size: int) -> str:
+    """使用采样方式从流计算MD5（部分计算），用于8650系列加快速度
+    采样策略：读取文件的开头、中间、结尾部分，以及文件大小，计算MD5
+    
+    Args:
+        stream: 文件流对象（支持read和seek）
+        file_size: 文件大小（字节）
+    """
+    import hashlib
+    import io
+    
+    # 如果文件很小（<10MB），直接计算完整MD5
+    if file_size < 10 * 1024 * 1024:
+        stream.seek(0)
+        md5_hash = hashlib.md5()
+        chunk_size = 8 * 1024 * 1024  # 8MB chunks
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            md5_hash.update(chunk)
+        return md5_hash.hexdigest()
+    
+    # 采样大小：每个采样点读取1MB
+    sample_size = 1024 * 1024  # 1MB
+    
+    md5_hash = hashlib.md5()
+    
+    # 1. 读取开头1MB
+    stream.seek(0)
+    chunk = stream.read(sample_size)
+    if chunk:
+        md5_hash.update(chunk)
+    
+    # 2. 读取中间1MB（文件中间位置）
+    if file_size > sample_size * 2:
+        mid_start = (file_size - sample_size) // 2
+        stream.seek(mid_start)
+        chunk = stream.read(sample_size)
+        if chunk:
+            md5_hash.update(chunk)
+    
+    # 3. 读取结尾1MB
+    if file_size > sample_size:
+        stream.seek(file_size - sample_size)
+        chunk = stream.read(sample_size)
+        if chunk:
+            md5_hash.update(chunk)
+    
+    # 4. 将文件大小也加入MD5计算，增加唯一性
+    md5_hash.update(str(file_size).encode())
+    
+    return md5_hash.hexdigest()
+
+
+def create_tee_stream(stream, target_stream, server_name: str = None, file_size: int = None):
+    """创建一个tee式包装流，在读取数据时同时写入目标流并计算MD5
+    用于8650系列：保存到临时文件的同时计算MD5（只需读取一次）
+    
+    Args:
+        stream: 原始文件流（Flask的file.stream）
+        target_stream: 目标流（临时文件）
+        server_name: 服务器名称，用于判断使用哪种MD5计算方式
+        file_size: 文件大小（字节）
+    
+    Returns:
+        (包装流对象, MD5计算器对象)
+    """
+    import hashlib
+    
+    class TeeMD5Stream:
+        """tee式包装流，在读取数据时同时写入目标流并计算MD5"""
+        def __init__(self, original_stream, target_stream, server_name, file_size, temp_file_path=None):
+            self.original_stream = original_stream
+            self.target_stream = target_stream
+            self.server_name = server_name
+            self.file_size = file_size  # 期望大小（用于初始化）
+            self.bytes_read = 0
+            self.temp_file_path = temp_file_path  # 临时文件路径，用于重新读取采样数据
+            
+            # 如果是8650系列且需要采样MD5，需要缓存采样部分
+            self.is_8650_sampled = server_name and server_name.startswith("LP-8650") and file_size and file_size >= 10 * 1024 * 1024
+            if self.is_8650_sampled:
+                self.sample_size = 1024 * 1024  # 1MB
+                self.samples = {}  # 存储采样位置的数据，key为位置，value为采样数据
+                # 采样位置会在读取完成后基于实际大小重新计算
+                self.read_positions = [
+                    0,  # 开头
+                    (file_size - self.sample_size) // 2,  # 中间（基于期望大小，用于提取）
+                    file_size - self.sample_size  # 结尾（基于期望大小，用于提取）
+                ]
+            else:
+                # 8797完整MD5或其他情况（虽然这个函数主要用于8650）
+                self.md5_hash = hashlib.md5()
+                self.samples = None
+                self.read_positions = None
+        
+        def read(self, size=-1):
+            """读取数据，同时写入目标流并计算MD5"""
+            chunk = self.original_stream.read(size)
+            if not chunk:
+                return chunk
+            
+            # 写入目标流（临时文件）
+            self.target_stream.write(chunk)
+            
+            chunk_start = self.bytes_read
+            chunk_end = self.bytes_read + len(chunk)
+            
+            # 如果是8650采样MD5，需要提取采样部分
+            if self.is_8650_sampled:
+                # 基于期望大小计算采样位置，提取采样数据
+                # 注意：如果实际文件大小小于期望大小，某些采样位置可能超出实际文件
+                # 这会在get_md5()中基于实际大小重新计算采样位置时处理
+                for pos in self.read_positions:
+                    if pos >= chunk_start and pos < chunk_end:
+                        offset_in_chunk = pos - chunk_start
+                        sample_data = chunk[offset_in_chunk:offset_in_chunk + self.sample_size]
+                        if len(sample_data) > 0:
+                            self.samples[pos] = sample_data
+            else:
+                # 完整MD5，直接更新
+                self.md5_hash.update(chunk)
+            
+            self.bytes_read += len(chunk)
+            return chunk
+        
+        def get_md5(self):
+            """获取计算完成的MD5值"""
+            if self.is_8650_sampled:
+                # 8650采样MD5：按顺序更新MD5
+                # 重新计算采样位置，基于实际读取的字节数（确保与远端MD5计算一致）
+                actual_size = self.bytes_read
+                actual_read_positions = [
+                    0,  # 开头
+                    (actual_size - self.sample_size) // 2 if actual_size > self.sample_size * 2 else 0,  # 中间
+                    actual_size - self.sample_size if actual_size > self.sample_size else 0  # 结尾
+                ]
+                
+                md5_hash = hashlib.md5()
+                # 按实际采样位置顺序更新MD5
+                # 如果实际位置在samples中，直接使用；否则从临时文件重新读取
+                import os
+                for pos in actual_read_positions:
+                    if pos in self.samples:
+                        # 使用已提取的采样数据
+                        md5_hash.update(self.samples[pos])
+                    elif self.temp_file_path and os.path.exists(self.temp_file_path):
+                        # 采样位置不在已提取的数据中，从临时文件重新读取
+                        try:
+                            with open(self.temp_file_path, 'rb') as f:
+                                f.seek(pos)
+                                sample_data = f.read(self.sample_size)
+                                if len(sample_data) > 0:
+                                    md5_hash.update(sample_data)
+                        except Exception as e:
+                            # 如果读取失败，跳过该采样点
+                            pass
+                
+                # 将实际读取的字节数也加入MD5计算（使用bytes_read而不是file_size，确保与实际文件大小一致）
+                md5_hash.update(str(actual_size).encode())
+                result = md5_hash.hexdigest()
+                return result
+            else:
+                # 完整MD5
+                result = self.md5_hash.hexdigest()
+                return result
+        
+        def close(self):
+            """关闭原始流和目标流"""
+            if hasattr(self.original_stream, 'close'):
+                self.original_stream.close()
+            if hasattr(self.target_stream, 'close'):
+                self.target_stream.close()
+        
+        def __enter__(self):
+            return self
+        
+        def __exit__(self, *args):
+            self.close()
+    
+    # 获取临时文件路径（如果target_stream是文件对象）
+    temp_file_path = None
+    if hasattr(target_stream, 'name'):
+        temp_file_path = target_stream.name
+    
+    # 创建包装流
+    wrapped_stream = TeeMD5Stream(stream, target_stream, server_name, file_size, temp_file_path)
+    
+    return wrapped_stream, wrapped_stream
+
+
+def create_md5_calculating_stream(stream, server_name: str = None, file_size: int = None):
+    """创建一个包装流，在上传过程中同时计算MD5
+    用于8797系列：边上传边计算MD5，最后与远端md5sum结果对比
+    
+    Args:
+        stream: 原始文件流
+        server_name: 服务器名称，用于判断使用哪种MD5计算方式
+        file_size: 文件大小（字节）
+    
+    Returns:
+        包装流对象，支持read()和get_md5()方法
+    """
+    import hashlib
+    
+    class MD5CalculatingStream:
+        """包装流，在读取数据时同时计算MD5"""
+        def __init__(self, original_stream, server_name, file_size):
+            self.original_stream = original_stream
+            self.server_name = server_name
+            self.file_size = file_size
+            self.bytes_read = 0
+            
+            # 8797系列使用完整MD5计算
+            self.md5_hash = hashlib.md5()
+        
+        def read(self, size=-1):
+            """读取数据并同时计算MD5"""
+            chunk = self.original_stream.read(size)
+            if not chunk:
+                return chunk
+            
+            # 直接更新MD5（8797使用完整MD5）
+            self.md5_hash.update(chunk)
+            self.bytes_read += len(chunk)
+            return chunk
+        
+        def get_md5(self):
+            """获取计算完成的MD5值"""
+            result = self.md5_hash.hexdigest()
+            return result
+        
+        def close(self):
+            """关闭原始流"""
+            if hasattr(self.original_stream, 'close'):
+                self.original_stream.close()
+        
+        def __enter__(self):
+            return self
+        
+        def __exit__(self, *args):
+            self.close()
+    
+    # 创建包装流
+    wrapped_stream = MD5CalculatingStream(stream, server_name, file_size)
+    
+    return wrapped_stream
 
 
 def parse_md5_output(out: str) -> str:
