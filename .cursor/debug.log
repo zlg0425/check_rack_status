@@ -1,0 +1,12 @@
+{"location":"web_ui.py:2096","message":"downloadFile called","data":{"remotePath":"/opt/data/Elog/consumeParam.json"},"timestamp":1766463427151,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"web_ui.py:2112","message":"before window.open","data":{},"timestamp":1766463427152,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"web_ui.py:2107","message":"downloadUrl built","data":{"downloadUrl":"/api/download/stream?server_name=LP-8650-2&server_ip=10.99.19.12&port=22&remote_path=%2Fopt%2Fdata%2FElog%2FconsumeParam.json"},"timestamp":1766463427152,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"web_ui.py:2116","message":"after window.open","data":{"downloadWindow":true},"timestamp":1766463427176,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"web_ui.py:2096","message":"downloadFile called","data":{"remotePath":"/opt/data/Elog/consumeParam.json"},"timestamp":1766463439914,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"web_ui.py:2107","message":"downloadUrl built","data":{"downloadUrl":"/api/download/stream?server_name=LP-8650-2&server_ip=10.99.19.12&port=22&remote_path=%2Fopt%2Fdata%2FElog%2FconsumeParam.json"},"timestamp":1766463439914,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"web_ui.py:2112","message":"before window.open","data":{},"timestamp":1766463439915,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"web_ui.py:2116","message":"after window.open","data":{"downloadWindow":true},"timestamp":1766463439928,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"web_ui.py:2096","message":"downloadFile called","data":{"remotePath":"/opt/data/Elog/consumeParam.json"},"timestamp":1766463520487,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"web_ui.py:2107","message":"downloadUrl built","data":{"downloadUrl":"/api/download/stream?server_name=LP-8650-2&server_ip=10.99.19.12&port=22&remote_path=%2Fopt%2Fdata%2FElog%2FconsumeParam.json"},"timestamp":1766463520487,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"web_ui.py:2112","message":"before window.open","data":{},"timestamp":1766463520488,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"web_ui.py:2116","message":"after window.open","data":{"downloadWindow":true},"timestamp":1766463520502,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}

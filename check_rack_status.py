@@ -272,6 +272,374 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         return False, str(e)
 
 
+def sftp_download(server_name: str, ip: str, port: int, remote_path: str, local_path: str, progress_callback=None):
+    """从指定服务器和端口下载文件或文件夹，支持进度回调
+    Args:
+        server_name: 服务器名称
+        ip: 服务器IP
+        port: 端口
+        remote_path: 远程文件或文件夹路径
+        local_path: 本地保存路径（文件）或目录（文件夹）
+        progress_callback: 进度回调函数 callback(transferred, total)
+    Returns:
+        (success: bool, info: str) - 成功返回(True, 本地路径)，失败返回(False, 错误信息)
+    """
+    auth_mode = resolve_auth_mode(server_name)
+    
+    def getfo_progress_callback(transferred, total):
+        if progress_callback:
+            progress_callback(transferred, total)
+    
+    # 用于跟踪文件夹下载的总进度
+    total_transferred = [0]  # 使用列表以便在嵌套函数中修改
+    total_size = [0]  # 总大小
+    
+    def calculate_total_size(sftp, remote_path):
+        """递归计算文件夹总大小"""
+        total = 0
+        try:
+            file_stat = sftp.stat(remote_path)
+            if file_stat.st_mode & 0o040000:  # 目录
+                try:
+                    items = sftp.listdir_attr(remote_path)
+                    for item in items:
+                        # 跳过符号链接和设备文件
+                        if item.st_mode & 0o120000:  # 符号链接
+                            continue
+                        item_path = posixpath.join(remote_path, item.filename)
+                        if item.st_mode & 0o040000:  # 子目录
+                            total += calculate_total_size(sftp, item_path)
+                        elif item.st_mode & 0o100000:  # 普通文件
+                            total += item.st_size
+                        # 其他类型文件跳过
+                except IOError:
+                    # 无法访问目录，跳过
+                    pass
+            else:  # 文件
+                total = file_stat.st_size
+        except Exception:
+            # 计算大小失败，返回0（不影响下载，只是进度可能不准确）
+            pass
+        return total
+    
+    def download_file(sftp, remote_file_path, local_file_path, file_size=None):
+        """下载单个文件"""
+        # 检查本地文件是否已存在
+        if os.path.exists(local_file_path):
+            if os.path.isdir(local_file_path):
+                raise Exception(f"本地路径是目录而不是文件: {local_file_path}")
+            # 文件已存在，删除后重新下载（覆盖策略）
+            try:
+                os.remove(local_file_path)
+            except Exception as e:
+                raise Exception(f"无法删除已存在的文件 {local_file_path}: {str(e)}")
+        
+        # 确保本地目录存在
+        local_dir = os.path.dirname(local_file_path)
+        if local_dir:
+            if os.path.exists(local_dir):
+                # 如果路径已存在，检查是否是目录
+                if not os.path.isdir(local_dir):
+                    raise Exception(f"本地路径已存在但不是目录: {local_dir}")
+            else:
+                # 路径不存在，创建目录
+                try:
+                    os.makedirs(local_dir, exist_ok=True)
+                except OSError as e:
+                    # 检查是否是权限错误
+                    if e.errno == 13:  # Permission denied
+                        raise Exception(f"权限不足，无法创建本地目录 {local_dir}")
+                    elif e.errno == 28:  # No space left on device
+                        raise Exception(f"磁盘空间不足，无法创建本地目录 {local_dir}")
+                    else:
+                        raise Exception(f"无法创建本地目录 {local_dir}: {str(e)}")
+        
+        file_last_transferred = [0]  # 当前文件已传输的字节数
+        local_file_handle = None
+        
+        def file_progress_callback(transferred, total):
+            # 更新总进度
+            if progress_callback and total_size[0] > 0:
+                try:
+                    # 计算当前文件已传输的增量
+                    delta = transferred - file_last_transferred[0]
+                    file_last_transferred[0] = transferred
+                    total_transferred[0] += delta
+                    progress_callback(total_transferred[0], total_size[0])
+                except Exception:
+                    # 进度回调异常不应中断下载
+                    pass
+        
+        file_last_transferred[0] = 0
+        
+        try:
+            # 检查磁盘空间（如果知道文件大小）
+            if file_size:
+                try:
+                    import shutil
+                    stat = shutil.disk_usage(local_dir if local_dir else os.path.dirname(os.path.abspath(local_file_path)))
+                    if stat.free < file_size:
+                        raise Exception(f"磁盘空间不足，需要 {file_size} 字节，可用 {stat.free} 字节")
+                except ImportError:
+                    # Python < 3.3 不支持 shutil.disk_usage，跳过检查
+                    pass
+            
+            local_file_handle = open(local_file_path, 'wb')
+            try:
+                sftp.getfo(remote_file_path, local_file_handle, callback=file_progress_callback)
+            except Exception as e:
+                # 下载失败，删除不完整的文件
+                local_file_handle.close()
+                local_file_handle = None
+                try:
+                    if os.path.exists(local_file_path):
+                        os.remove(local_file_path)
+                except:
+                    pass
+                raise
+            finally:
+                if local_file_handle:
+                    local_file_handle.close()
+        except IOError as e:
+            # 如果文件打开失败，可能是目录不存在，再次尝试创建
+            if local_file_handle:
+                try:
+                    local_file_handle.close()
+                except:
+                    pass
+            if local_dir and not os.path.exists(local_dir):
+                try:
+                    os.makedirs(local_dir, exist_ok=True)
+                    local_file_handle = open(local_file_path, 'wb')
+                    try:
+                        sftp.getfo(remote_file_path, local_file_handle, callback=file_progress_callback)
+                    except Exception as e2:
+                        local_file_handle.close()
+                        if os.path.exists(local_file_path):
+                            try:
+                                os.remove(local_file_path)
+                            except:
+                                pass
+                        raise Exception(f"下载文件失败 {remote_file_path}: {str(e2)}")
+                    finally:
+                        if local_file_handle:
+                            local_file_handle.close()
+                except Exception as e2:
+                    raise Exception(f"无法创建文件 {local_file_path}: {str(e2)}")
+            else:
+                raise
+    
+    def download_directory(sftp, remote_dir_path, local_dir_path):
+        """递归下载文件夹"""
+        # 确保本地目录存在
+        if os.path.exists(local_dir_path):
+            # 如果路径已存在，检查是否是目录
+            if not os.path.isdir(local_dir_path):
+                return False, f"本地路径已存在但不是目录: {local_dir_path}"
+        else:
+            # 路径不存在，创建目录
+            try:
+                os.makedirs(local_dir_path, exist_ok=True)
+            except Exception as e:
+                return False, f"无法创建本地目录 {local_dir_path}: {str(e)}"
+        
+        # 列出远程目录内容
+        try:
+            items = sftp.listdir_attr(remote_dir_path)
+        except IOError as e:
+            return False, f"无法访问远程目录: {str(e)}"
+        
+        for item in items:
+            remote_item_path = posixpath.join(remote_dir_path, item.filename)
+            local_item_path = os.path.join(local_dir_path, item.filename)
+            
+            # 处理符号链接（0o120000）
+            if item.st_mode & 0o120000:  # 符号链接
+                # 尝试验证是否真的是符号链接
+                try:
+                    real_path = sftp.readlink(remote_item_path)
+                    # 如果readlink成功，说明是真正的符号链接，跳过
+                    continue
+                except:
+                    # readlink失败，可能是文件模式问题，尝试作为普通文件处理
+                    # 某些系统可能错误地将普通文件识别为符号链接
+                    # 尝试直接下载
+                    try:
+                        download_file(sftp, remote_item_path, local_item_path, item.st_size)
+                    except Exception as e:
+                        # 如果下载失败，跳过
+                        continue
+            
+            if item.st_mode & 0o040000:  # 目录
+                # 递归下载子目录
+                ok, info = download_directory(sftp, remote_item_path, local_item_path)
+                if not ok:
+                    return False, info
+            elif item.st_mode & 0o100000:  # 普通文件
+                # 下载文件
+                try:
+                    download_file(sftp, remote_item_path, local_item_path, item.st_size)
+                except Exception as e:
+                    return False, f"下载文件失败 {remote_item_path}: {str(e)}"
+            # 其他类型的文件（设备文件、管道等）跳过
+        
+        return True, local_dir_path
+    
+    if auth_mode == "none":
+        transport = None
+        sftp = None
+        try:
+            sock = socket.create_connection((ip, port), timeout=ssh_timeout)
+            transport = paramiko.Transport(sock)
+            transport.start_client(timeout=ssh_timeout)
+            transport.auth_none(ssh_username)
+            
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            
+            # 检查远程路径是文件还是目录
+            try:
+                # 先使用lstat检查（不跟随符号链接）
+                try:
+                    file_stat = sftp.lstat(remote_path)
+                except:
+                    # 如果lstat失败，使用stat
+                    file_stat = sftp.stat(remote_path)
+                
+                is_directory = file_stat.st_mode & 0o040000  # 检查是否是目录
+                is_symlink = file_stat.st_mode & 0o120000  # 检查是否是符号链接
+                
+                # 如果是符号链接，尝试解析真实路径
+                if is_symlink:
+                    try:
+                        real_path = sftp.readlink(remote_path)
+                        if not posixpath.isabs(real_path):
+                            # 相对路径，转换为绝对路径
+                            real_path = posixpath.join(posixpath.dirname(remote_path), real_path)
+                        # 重新检查真实路径
+                        file_stat = sftp.stat(real_path)
+                        is_directory = file_stat.st_mode & 0o040000
+                        remote_path = real_path  # 使用真实路径
+                    except Exception:
+                        # 无法解析符号链接，可能是误判（某些系统可能错误地将普通文件识别为符号链接）
+                        # 如果readlink失败，尝试直接下载文件
+                        # 不返回错误，继续作为普通文件处理
+                        pass
+            except IOError as e:
+                error_msg = str(e)
+                if "Permission denied" in error_msg or "permission" in error_msg.lower():
+                    return False, f"权限不足，无法访问远程路径: {remote_path}"
+                elif "No such file" in error_msg or "not found" in error_msg.lower():
+                    return False, f"远程路径不存在: {remote_path}"
+                else:
+                    return False, f"远程路径无法访问: {remote_path} ({error_msg})"
+            
+            # 如果是文件夹，先计算总大小
+            if is_directory:
+                if progress_callback:
+                    total_size[0] = calculate_total_size(sftp, remote_path)
+                    if total_size[0] > 0:
+                        progress_callback(0, total_size[0])  # 初始化进度
+                # 下载文件夹
+                ok, info = download_directory(sftp, remote_path, local_path)
+                if ok:
+                    return True, local_path
+                else:
+                    return False, info
+            else:
+                # 下载文件
+                if progress_callback:
+                    total_size[0] = file_stat.st_size
+                download_file(sftp, remote_path, local_path, file_stat.st_size)
+                return True, local_path
+            
+        except Exception as e:
+            return False, str(e)
+        finally:
+            if sftp:
+                sftp.close()
+            if transport:
+                transport.close()
+    else:
+        # key模式
+        key_path = resolve_key(server_name, port)
+        if not key_path:
+            return False, f"端口{port}未配置私钥"
+        
+        transport = None
+        sftp = None
+        try:
+            private_key = paramiko.RSAKey.from_private_key_file(key_path)
+            transport = paramiko.Transport((ip, port))
+            transport.start_client(timeout=ssh_timeout)
+            transport.auth_publickey(username=ssh_username, key=private_key)
+            
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            
+            # 检查远程路径是文件还是目录
+            try:
+                # 先使用lstat检查（不跟随符号链接）
+                try:
+                    file_stat = sftp.lstat(remote_path)
+                except:
+                    # 如果lstat失败，使用stat
+                    file_stat = sftp.stat(remote_path)
+                
+                is_directory = file_stat.st_mode & 0o040000  # 检查是否是目录
+                is_symlink = file_stat.st_mode & 0o120000  # 检查是否是符号链接
+                
+                # 如果是符号链接，尝试解析真实路径
+                if is_symlink:
+                    try:
+                        real_path = sftp.readlink(remote_path)
+                        if not posixpath.isabs(real_path):
+                            # 相对路径，转换为绝对路径
+                            real_path = posixpath.join(posixpath.dirname(remote_path), real_path)
+                        # 重新检查真实路径
+                        file_stat = sftp.stat(real_path)
+                        is_directory = file_stat.st_mode & 0o040000
+                        remote_path = real_path  # 使用真实路径
+                    except Exception:
+                        # 无法解析符号链接，可能是误判（某些系统可能错误地将普通文件识别为符号链接）
+                        # 如果readlink失败，尝试直接下载文件
+                        # 不返回错误，继续作为普通文件处理
+                        pass
+            except IOError as e:
+                error_msg = str(e)
+                if "Permission denied" in error_msg or "permission" in error_msg.lower():
+                    return False, f"权限不足，无法访问远程路径: {remote_path}"
+                elif "No such file" in error_msg or "not found" in error_msg.lower():
+                    return False, f"远程路径不存在: {remote_path}"
+                else:
+                    return False, f"远程路径无法访问: {remote_path} ({error_msg})"
+            
+            # 如果是文件夹，先计算总大小
+            if is_directory:
+                if progress_callback:
+                    total_size[0] = calculate_total_size(sftp, remote_path)
+                    if total_size[0] > 0:
+                        progress_callback(0, total_size[0])  # 初始化进度
+                # 下载文件夹
+                ok, info = download_directory(sftp, remote_path, local_path)
+                if ok:
+                    return True, local_path
+                else:
+                    return False, info
+            else:
+                # 下载文件
+                if progress_callback:
+                    total_size[0] = file_stat.st_size
+                download_file(sftp, remote_path, local_path, file_stat.st_size)
+                return True, local_path
+            
+        except Exception as e:
+            return False, str(e)
+        finally:
+            if sftp:
+                sftp.close()
+            if transport:
+                transport.close()
+
+
 def remote_md5(server_name: str, ip: str, port: int, remote_path: str):
     """计算远端文件 MD5
     根据服务器类型选择不同方法：

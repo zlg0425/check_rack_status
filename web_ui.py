@@ -8,6 +8,8 @@ import threading
 import time
 import uuid
 import json
+import zipfile
+import io
 from flask import Flask, jsonify, render_template_string, request, Response, stream_with_context
 from check_rack_status import (
     load_config,
@@ -16,6 +18,7 @@ from check_rack_status import (
     ssh_username,
     upload_target_dir,
     sftp_upload,
+    sftp_download,
     fota_target_dir,
     md5_bytes,
     md5_stream,
@@ -30,6 +33,7 @@ from check_rack_status import (
     ssh_timeout,
     ensure_remote_dir,
     fota_filename_validation,
+    create_transport,
 )
 import paramiko
 import socket
@@ -51,6 +55,7 @@ FOTA_TIMING_STATS_FILE = "fota_timing_stats.json"
 # 上传任务进度字典 {task_id: {"progress": 0-100, "status": "uploading|done|error", "result": {...}}}
 upload_tasks = {}
 upload_tasks_lock = threading.Lock()
+
 
 # FOTA耗时统计锁
 fota_timing_stats_lock = threading.Lock()
@@ -571,6 +576,123 @@ def api_upload_progress(task_id):
             time.sleep(0.2)
     
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+
+@app.route("/api/download/stream")
+def api_download_stream():
+    """流式下载文件或文件夹到浏览器（直接另存为）"""
+    try:
+        server_name = request.args.get("server_name", "").strip()
+        server_ip = request.args.get("server_ip", "").strip()
+        port = int(request.args.get("port", 0))
+        remote_path = request.args.get("remote_path", "").strip()
+        
+        if not server_name or not server_ip or port not in (22, 9999):
+            return jsonify({"ok": False, "error": "参数缺失或端口非法"}), 400
+        if not remote_path:
+            return jsonify({"ok": False, "error": "请填写远程文件路径"}), 400
+        
+        # 建立SFTP连接
+        transport = create_transport(server_name, server_ip, port)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        
+        try:
+            # 检查是文件还是文件夹
+            file_stat = sftp.stat(remote_path)
+            is_directory = file_stat.st_mode & 0o040000
+            filename = os.path.basename(remote_path) or "download"
+            
+            if is_directory:
+                # 文件夹：打包成ZIP流式传输
+                def generate_zip():
+                    try:
+                        zip_buffer = io.BytesIO()
+                        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                            def add_directory_recursive(sftp, remote_dir, zip_path=""):
+                                """递归添加目录到ZIP"""
+                                try:
+                                    items = sftp.listdir_attr(remote_dir)
+                                    for item in items:
+                                        remote_item_path = posixpath.join(remote_dir, item.filename)
+                                        zip_item_path = posixpath.join(zip_path, item.filename) if zip_path else item.filename
+                                        
+                                        # 跳过符号链接
+                                        if item.st_mode & 0o120000:
+                                            try:
+                                                sftp.readlink(remote_item_path)
+                                                continue  # 真正的符号链接，跳过
+                                            except:
+                                                pass  # 可能是误判，继续处理
+                                        
+                                        if item.st_mode & 0o040000:  # 目录
+                                            add_directory_recursive(sftp, remote_item_path, zip_item_path)
+                                        elif item.st_mode & 0o100000:  # 文件
+                                            try:
+                                                with sftp.open(remote_item_path, 'rb') as remote_file:
+                                                    zip_file.writestr(zip_item_path, remote_file.read())
+                                            except Exception as e:
+                                                # 文件读取失败，跳过
+                                                continue
+                                except Exception as e:
+                                    # 目录访问失败，跳过
+                                    pass
+                            
+                            add_directory_recursive(sftp, remote_path)
+                        
+                        zip_buffer.seek(0)
+                        while True:
+                            chunk = zip_buffer.read(8192)  # 8KB chunks
+                            if not chunk:
+                                break
+                            yield chunk
+                    finally:
+                        sftp.close()
+                        transport.close()
+                
+                zip_filename = f"{filename}.zip"
+                return Response(
+                    generate_zip(),
+                    mimetype='application/zip',
+                    headers={
+                        'Content-Disposition': f'attachment; filename="{zip_filename}"',
+                        'Content-Type': 'application/zip'
+                    }
+                )
+            else:
+                # 文件：直接流式传输
+                def generate_file():
+                    try:
+                        remote_file = sftp.open(remote_path, 'rb')
+                        while True:
+                            chunk = remote_file.read(8192)  # 8KB chunks
+                            if not chunk:
+                                break
+                            yield chunk
+                        remote_file.close()
+                    finally:
+                        sftp.close()
+                        transport.close()
+                
+                return Response(
+                    generate_file(),
+                    mimetype='application/octet-stream',
+                    headers={
+                        'Content-Disposition': f'attachment; filename="{filename}"',
+                        'Content-Type': 'application/octet-stream'
+                    }
+                )
+        except IOError as e:
+            sftp.close()
+            transport.close()
+            return jsonify({"ok": False, "error": f"远程路径不存在或无法访问: {str(e)}"}), 400
+        except Exception as e:
+            if sftp:
+                sftp.close()
+            if transport:
+                transport.close()
+            return jsonify({"ok": False, "error": f"服务器异常: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"服务器异常: {str(e)}"}), 500
 
 
 @app.route("/api/fota", methods=["POST"])
@@ -1886,6 +2008,24 @@ def index():
     </div>
   </div>
 
+  <div class="modal-backdrop" id="downloadModal">
+    <div class="modal">
+      <h3>下载文件</h3>
+      <div>服务器：<span id="downloadServer"></span></div>
+      <div>端口：<span id="downloadPort"></span></div>
+      <label>远程文件路径</label>
+      <input type="text" id="remotePath" placeholder="例如 /opt/data/fota/file.bin">
+      <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+        提示：文件夹将自动打包成ZIP文件下载，点击下载后会弹出"另存为"对话框
+      </div>
+      <div class="progress" id="downloadProgress" style="margin-top:8px;"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeDownload()">取消</button>
+        <button class="btn" onclick="downloadFile()">下载</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     function tag(text, cls) {
       return '<span class="tag ' + cls + '">' + text + '</span>';
@@ -1933,6 +2073,72 @@ def index():
 
     const uploadServer = document.getElementById('uploadServer');
     const uploadPort = document.getElementById('uploadPort');
+    const downloadBackdrop = document.getElementById('downloadModal');
+    const downloadServer = document.getElementById('downloadServer');
+    const downloadPort = document.getElementById('downloadPort');
+    const remotePathInput = document.getElementById('remotePath');
+    const downloadProgressBox = document.getElementById('downloadProgress');
+    let currentDownload = { name: "", ip: "", port: 22 };
+
+    function openDownload(name, ip, port) {
+      currentDownload = { name, ip, port };
+      downloadServer.textContent = name;
+      downloadPort.textContent = port;
+      remotePathInput.value = '';
+      downloadProgressBox.textContent = '';
+      downloadBackdrop.style.display = 'flex';
+    }
+
+    function closeDownload() {
+      downloadBackdrop.style.display = 'none';
+    }
+
+    function downloadFile() {
+      const remotePath = remotePathInput.value.trim();
+      
+      if (!remotePath) {
+        alert('请填写远程文件路径');
+        return;
+      }
+
+      downloadProgressBox.textContent = '正在准备下载...';
+
+      // 构建流式下载URL
+      const downloadUrl = `/api/download/stream?server_name=${encodeURIComponent(currentDownload.name)}&server_ip=${encodeURIComponent(currentDownload.ip)}&port=${currentDownload.port}&remote_path=${encodeURIComponent(remotePath)}`;
+      
+      // 使用window.open强制弹出"另存为"对话框
+      downloadProgressBox.textContent = '正在下载，请在弹出的对话框中选择保存位置...';
+      
+      // 尝试使用window.open打开下载URL，这可能会触发"另存为"对话框
+      const downloadWindow = window.open(downloadUrl, '_blank');
+      
+      // 如果window.open被阻止，回退到使用<a>标签
+      if (!downloadWindow) {
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = '';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+      } else {
+        // 关闭新窗口（如果浏览器没有自动关闭）
+        setTimeout(() => {
+          try {
+            downloadWindow.close();
+          } catch(e) {
+            // 忽略错误
+          }
+        }, 1000);
+      }
+      
+      downloadProgressBox.textContent = '下载已开始！';
+      setTimeout(() => {
+        closeDownload();
+      }, 1000);
+    }
 
     function openUpload(name, ip, port) {
       currentUpload = { name, ip, port };
@@ -2181,6 +2387,8 @@ def index():
             <td>
               <button class="btn" onclick="openUpload('${item.server_name}','${item.server_ip}',22)">上传22</button>
               <button class="btn" onclick="openUpload('${item.server_name}','${item.server_ip}',9999)">上传9999</button>
+              <button class="btn" onclick="openDownload('${item.server_name}','${item.server_ip}',22)" style="margin-top: 4px;">下载22</button>
+              <button class="btn" onclick="openDownload('${item.server_name}','${item.server_ip}',9999)" style="margin-top: 4px;">下载9999</button>
             </td>
             <td>
               <button class="btn" onclick="openFota('${item.server_name}','${item.server_ip}',22)" ${item.fota_status_22 ? 'disabled style="opacity: 0.5;"' : ''}>FOTA 22</button>
