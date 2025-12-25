@@ -166,6 +166,93 @@ def record_fota_timing(operation, duration_seconds, file_size_bytes=None):
         save_fota_timing_stats(stats)
 
 
+def detect_fota_port(server_name: str, filename: str) -> tuple[int, str]:
+    """
+    根据服务器名称和文件名自动判断FOTA端口
+    同时验证文件是否与服务器类型匹配
+    
+    Args:
+        server_name: 服务器名称，如 "LP-8650-1", "LP-8797-1"
+        filename: 文件名，如 "LP-ADDC050_v1.0.icsw"
+    
+    Returns:
+        (port, message): 端口号(22或9999)和提示信息
+        如果无法判断，返回 (0, error_message)
+    """
+    # 1. 确定服务器类型
+    server_type = None
+    if server_name.startswith("LP-8650"):
+        server_type = "LP-8650"
+    elif server_name.startswith("LP-8797"):
+        server_type = "LP-8797"
+    else:
+        return (0, f"未知的服务器类型: {server_name}")
+    
+    # 2. 获取该服务器类型的端口配置
+    if not fota_filename_validation or server_type not in fota_filename_validation:
+        return (0, f"服务器类型 {server_type} 未配置文件名验证规则")
+    
+    port_config = fota_filename_validation[server_type]
+    
+    # 3. **关键增强：检查文件名是否与其他服务器类型的前缀匹配**
+    #   如果匹配了其他服务器类型的文件，应该提示错误
+    all_server_types = list(fota_filename_validation.keys())
+    mismatched_types = []
+    
+    for other_type in all_server_types:
+        if other_type == server_type:
+            continue  # 跳过当前服务器类型
+        
+        other_config = fota_filename_validation[other_type]
+        for other_prefix in other_config.values():
+            if other_prefix in filename:
+                mismatched_types.append({
+                    "type": other_type,
+                    "prefix": other_prefix
+                })
+    
+    # 如果文件名匹配了其他服务器类型的文件，返回错误
+    if mismatched_types:
+        mismatched_info = ", ".join([f"{m['type']}({m['prefix']})" for m in mismatched_types])
+        expected_prefixes = list(port_config.values())
+        return (0, f"文件 '{filename}' 不匹配当前服务器类型 {server_type}。\n"
+                   f"检测到其他服务器类型的文件: {mismatched_info}\n"
+                   f"当前服务器 {server_type} 期望的前缀: {', '.join(expected_prefixes)}")
+    
+    # 4. 检查文件名包含哪个端口的前缀（仅检查当前服务器类型）
+    detected_ports = []
+    for port_str, prefix in port_config.items():
+        if prefix in filename:
+            detected_ports.append((int(port_str), prefix))
+    
+    # 5. 判断结果
+    if len(detected_ports) == 0:
+        # 没有匹配的前缀
+        expected_prefixes = list(port_config.values())
+        # 检查是否包含任何已知的前缀（用于更友好的错误提示）
+        all_prefixes = []
+        for st in all_server_types:
+            all_prefixes.extend(fota_filename_validation[st].values())
+        
+        found_prefixes = [p for p in all_prefixes if p in filename]
+        if found_prefixes:
+            # 找到了前缀，但是不匹配当前服务器类型
+            return (0, f"文件 '{filename}' 包含的前缀 '{', '.join(found_prefixes)}' 不匹配服务器类型 {server_type}。\n"
+                       f"当前服务器 {server_type} 期望的前缀: {', '.join(expected_prefixes)}")
+        else:
+            # 完全没有找到任何已知前缀
+            return (0, f"文件 '{filename}' 不包含任何有效的前缀。\n"
+                       f"当前服务器 {server_type} 期望的前缀: {', '.join(expected_prefixes)}")
+    elif len(detected_ports) == 1:
+        # 唯一匹配
+        port, prefix = detected_ports[0]
+        return (port, f"检测到端口 {port} (前缀: {prefix})")
+    else:
+        # 多个匹配（理论上不应该发生，但需要处理）
+        ports = [str(p) for p, _ in detected_ports]
+        return (0, f"文件 '{filename}' 匹配多个端口: {', '.join(ports)}，请检查文件名")
+
+
 def get_avg_fota_timing(operation, file_size_bytes=None):
     """获取FOTA操作的平均耗时（秒）
     
@@ -1338,17 +1425,34 @@ def api_fota():
     try:
         server_name = request.form.get("server_name", "").strip()
         server_ip = request.form.get("server_ip", "").strip()
-        port = int(request.form.get("port", 0))
+        port_str = request.form.get("port", "0")  # 允许传入0或空字符串
         file = request.files.get("file")
 
-        if not server_name or not server_ip or port not in (22, 9999):
-            log_fota(f"[{server_name}/{server_ip}:{port}] 参数缺失或端口非法")
-            return jsonify({"ok": False, "error": "参数缺失或端口非法"}), 400
+        if not server_name or not server_ip:
+            log_fota(f"[{server_name}/{server_ip}] 参数缺失")
+            return jsonify({"ok": False, "error": "参数缺失"}), 400
+        
         if not file or file.filename == "":
-            log_fota(f"[{server_name}/{server_ip}:{port}] 未选择文件")
+            log_fota(f"[{server_name}/{server_ip}] 未选择文件")
             return jsonify({"ok": False, "error": "未选择文件"}), 400
 
         filename = file.filename
+        
+        # 如果端口为0或未提供，尝试自动检测
+        if port_str == "0" or not port_str:
+            detected_port, message = detect_fota_port(server_name, filename)
+            
+            if detected_port == 0:
+                log_fota(f"[{server_name}/{server_ip}] 自动检测端口失败: {message}")
+                return jsonify({"ok": False, "error": message}), 400
+            
+            port = detected_port
+            log_fota(f"[{server_name}/{server_ip}] 自动检测端口: {port} ({message})")
+        else:
+            port = int(port_str)
+            if port not in (22, 9999):
+                log_fota(f"[{server_name}/{server_ip}:{port}] 端口非法")
+                return jsonify({"ok": False, "error": "端口必须是22或9999"}), 400
 
         # 检查服务器是否已有正在执行的FOTA任务
         server_key = f"{server_name}:{server_ip}:{port}"
@@ -1830,27 +1934,68 @@ def api_fota_progress(task_id):
 
 @app.route("/api/batch-fota", methods=["POST"])
 def api_batch_fota():
-    """批量FOTA接口"""
+    """批量FOTA接口 - 支持自动端口检测和服务器类型验证"""
     try:
-        port = int(request.form.get("port", 0))
+        port_str = request.form.get("port", "0")  # 允许传入0
         servers_json = request.form.get("servers", "[]")
         file = request.files.get("file")
-
-        if port not in (22, 9999):
-            return jsonify({"ok": False, "error": "端口必须是22或9999"}), 400
-        
-        try:
-            servers = json.loads(servers_json)
-        except:
-            return jsonify({"ok": False, "error": "服务器列表格式错误"}), 400
-        
-        if not servers or len(servers) == 0:
-            return jsonify({"ok": False, "error": "服务器列表为空"}), 400
         
         if not file or file.filename == "":
             return jsonify({"ok": False, "error": "未选择文件"}), 400
-
+        
         filename = file.filename
+        
+        try:
+            servers = json.loads(servers_json)
+            if not servers or len(servers) == 0:
+                return jsonify({"ok": False, "error": "服务器列表为空"}), 400
+        except:
+            return jsonify({"ok": False, "error": "服务器列表格式错误"}), 400
+        
+        # **关键增强：验证文件是否与所有服务器类型匹配**
+        server_types = set()
+        for server in servers:
+            server_name = server.get("name", "")
+            if server_name.startswith("LP-8650"):
+                server_types.add("LP-8650")
+            elif server_name.startswith("LP-8797"):
+                server_types.add("LP-8797")
+        
+        if len(server_types) > 1:
+            # 混合了不同类型的服务器
+            return jsonify({
+                "ok": False, 
+                "error": f"批量FOTA不支持混合不同服务器类型。\n"
+                        f"检测到服务器类型: {', '.join(server_types)}\n"
+                        f"请选择相同类型的服务器进行批量升级"
+            }), 400
+        
+        if len(server_types) == 0:
+            return jsonify({"ok": False, "error": "无法识别服务器类型"}), 400
+        
+        # 使用第一个服务器检测端口和验证文件匹配
+        first_server = servers[0]
+        detected_port, message = detect_fota_port(first_server["name"], filename)
+        
+        if detected_port == 0:
+            return jsonify({"ok": False, "error": message}), 400
+        
+        # 如果明确传入了端口，验证是否一致
+        if port_str != "0" and port_str:
+            explicit_port = int(port_str)
+            if explicit_port != detected_port:
+                return jsonify({
+                    "ok": False,
+                    "error": f"指定的端口 {explicit_port} 与文件检测到的端口 {detected_port} 不一致。\n"
+                            f"检测信息: {message}"
+                }), 400
+            port = explicit_port
+        else:
+            port = detected_port
+            log_fota(f"[批量FOTA] 自动检测端口: {port} ({message})")
+        
+        if port not in (22, 9999):
+            return jsonify({"ok": False, "error": "端口必须是22或9999"}), 400
 
         # 真正的流式上传：使用临时文件，避免将整个文件读入内存
         import io
@@ -2508,6 +2653,32 @@ def api_batch_fota_cancel(batch_id):
         return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
 
 
+@app.route("/api/fota/detect-port", methods=["POST"])
+def api_fota_detect_port():
+    """检测文件名对应的端口"""
+    try:
+        data = request.get_json()
+        server_name = data.get("server_name", "").strip()
+        filename = data.get("filename", "").strip()
+        
+        if not server_name or not filename:
+            return jsonify({"ok": False, "error": "参数缺失"}), 400
+        
+        port, message = detect_fota_port(server_name, filename)
+        
+        if port == 0:
+            return jsonify({"ok": False, "error": message}), 400
+        
+        return jsonify({
+            "ok": True,
+            "port": port,
+            "message": message
+        })
+    except Exception as e:
+        log_srv(f"端口检测异常: {e}")
+        return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
+
+
 @app.route("/")
 def index():
     html = """
@@ -2628,15 +2799,29 @@ def index():
     <div class="modal">
       <h3>FOTA 升级</h3>
       <div>服务器：<span id="fotaServer"></span></div>
-      <div>端口：<span id="fotaPort"></span></div>
       <div>目标目录：<span id="fotaTargetText"></span></div>
       <label style="margin-top:8px;">选择升级包</label>
-      <input type="file" id="fotaFile">
+      <input type="file" id="fotaFile" accept=".icsw,.bin">
+      <!-- 新增：端口检测提示 -->
+      <div id="fotaPortHint" style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+        请选择文件，系统将自动检测端口并验证文件匹配
+      </div>
       <div class="progress" id="fotaProgress"></div>
       <div class="progress" id="fotaStep" style="margin-top:4px;"></div>
       <div class="modal-actions">
         <button class="btn" onclick="closeFota()">取消</button>
-        <button class="btn" onclick="startFota()">升级</button>
+        <button class="btn" id="fotaStartBtn" onclick="startFota()">升级</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量FOTA错误提示弹窗 -->
+  <div class="modal-backdrop" id="batchFotaErrorModal" style="display: none;">
+    <div class="modal" style="width: 400px;">
+      <h3 style="color: #ef4444;">批量FOTA错误</h3>
+      <div id="batchFotaErrorMessage" style="margin: 16px 0; color: var(--text); line-height: 1.6;"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeBatchFotaError()" style="background: #3b82f6; color: #fff; border: none;">确认</button>
       </div>
     </div>
   </div>
@@ -2650,7 +2835,9 @@ def index():
       </div>
       <div>目标目录：<span id="batchFotaTargetText"></span></div>
       <label style="margin-top:8px;">选择升级包</label>
-      <input type="file" id="batchFotaFile">
+      <input type="file" id="batchFotaFile" accept=".icsw,.bin">
+      <!-- 新增：端口检测提示 -->
+      <div id="batchFotaPortHint" style="margin-top: 8px; font-size: 12px; color: #6b7280;"></div>
       <div class="progress" id="batchFotaProgress"></div>
       <div class="progress" id="batchFotaStep" style="margin-top:4px;"></div>
       <div style="margin-top: 12px; max-height: 300px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
@@ -2661,8 +2848,10 @@ def index():
       <div class="modal-actions">
         <button class="btn" onclick="closeBatchFota()">关闭</button>
         <button class="btn" id="batchFotaCancelBtn" onclick="cancelBatchFota()" style="background: #ef4444; color: #fff; border: none; display: none;">终止</button>
-        <button class="btn" id="batchFotaStart22Btn" onclick="startBatchFota(22)" style="background: #3b82f6; color: #fff; border: none;">22端口升级</button>
-        <button class="btn" id="batchFotaStart9999Btn" onclick="startBatchFota(9999)" style="background: #3b82f6; color: #fff; border: none;">9999端口升级</button>
+        <button class="btn" id="batchFotaStartBtn" onclick="startBatchFota()" style="background: #3b82f6; color: #fff; border: none;">批量升级</button>
+      </div>
+      <!-- 新增：端口检测提示 -->
+      <div id="batchFotaPortHint" style="margin-top: 8px; font-size: 12px; color: #6b7280;"></div>
       </div>
     </div>
   </div>
@@ -2726,6 +2915,7 @@ def index():
     let fotaTarget = "";
     let currentUpload = { name: "", ip: "", port: 22 };
     let currentFota = { name: "", ip: "", port: 22 };
+    let currentBatchFotaPort = 0;  // 存储批量FOTA检测到的端口
     let selectedServers = {}; // {server_key: {name, ip}}
 
     const backdrop = document.getElementById('uploadModal');
@@ -3032,25 +3222,122 @@ def index():
       });
     }
 
-    function openFota(name, ip, port) {
-      currentFota = { name, ip, port };
-      fotaServer.textContent = name;
-      fotaPort.textContent = port;
+    /**
+     * 根据文件名和服务器名称自动判断端口
+     */
+    async function detectFotaPort(serverName, filename) {
+      try {
+        const response = await fetch('/api/fota/detect-port', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            server_name: serverName,
+            filename: filename
+          })
+        });
+        
+        // 处理HTTP错误状态码
+        if (!response.ok) {
+          let errorMessage = '检测失败';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            errorMessage = `服务器错误: ${response.status} ${response.statusText}`;
+          }
+          return { port: 0, message: errorMessage };
+        }
+        
+        const data = await response.json();
+        if (data.ok && data.port) {
+          return { port: data.port, message: data.message || '' };
+        } else {
+          return { port: 0, message: data.error || '无法判断端口' };
+        }
+      } catch (error) {
+        return { port: 0, message: `检测失败: ${error.message}` };
+      }
+    }
+
+    function openFota(name, ip, port = null) {
+      currentFota = { name, ip, port: port || 0 };  // port为0表示自动检测
+      const fotaBackdrop = document.getElementById('fotaModal');
+      const fotaServer = document.getElementById('fotaServer');
+      const fotaFile = document.getElementById('fotaFile');
+      const fotaTargetText = document.getElementById('fotaTargetText');
+      const fotaPortHint = document.getElementById('fotaPortHint');
+      const fotaStartBtn = document.getElementById('fotaStartBtn');
+      
+      fotaServer.textContent = `${name} (${ip})`;
       fotaTargetText.textContent = fotaTarget;
       fotaFile.value = '';
-      fotaProgress.textContent = '';
-      fotaStep.textContent = '等待选择文件...';
+      fotaPortHint.textContent = '请选择文件，系统将自动检测端口并验证文件匹配';
+      fotaPortHint.style.color = '#6b7280';
+      fotaStartBtn.disabled = false;
+      
       fotaBackdrop.style.display = 'flex';
+      
+      // 移除之前的事件监听器（如果存在），避免重复绑定
+      const newFotaFile = fotaFile.cloneNode(true);
+      fotaFile.parentNode.replaceChild(newFotaFile, fotaFile);
+      
+      // 监听文件选择，自动检测端口和验证文件匹配
+      newFotaFile.addEventListener('change', async function() {
+        // 每次文件选择时，重新获取按钮引用，确保状态正确
+        const fotaStartBtn = document.getElementById('fotaStartBtn');
+        const fotaPortHint = document.getElementById('fotaPortHint');
+        
+        const file = this.files[0];
+        if (!file) {
+          fotaPortHint.textContent = '请选择文件';
+          fotaPortHint.style.color = '#6b7280';
+          currentFota.port = 0;
+          fotaStartBtn.disabled = false;
+          return;
+        }
+        
+        // 显示检测中
+        fotaPortHint.textContent = '正在检测端口和验证文件匹配...';
+        fotaPortHint.style.color = '#3b82f6';
+        fotaStartBtn.disabled = true;
+        
+        // 调用检测接口
+        const result = await detectFotaPort(name, file.name);
+        
+        if (result.port > 0) {
+          currentFota.port = result.port;
+          fotaPortHint.textContent = `✓ 检测到端口: ${result.port} (${result.message})`;
+          fotaPortHint.style.color = '#10b981';
+          fotaStartBtn.disabled = false;
+        } else {
+          currentFota.port = 0;
+          // 错误信息可能包含换行，需要格式化显示
+          const errorMsg = result.message.replace(/\\n/g, '<br>');
+          fotaPortHint.innerHTML = `✗ ${errorMsg}`;
+          fotaPortHint.style.color = '#ef4444';
+          fotaStartBtn.disabled = true;
+        }
+      });
     }
 
     function closeFota() {
-      fotaBackdrop.style.display = 'none';
+      document.getElementById('fotaModal').style.display = 'none';
     }
 
-    function startFota() {
-      const file = fotaFile.files[0];
+    async function startFota() {
+      const file = document.getElementById('fotaFile').files[0];
       if (!file) {
         alert('请先选择文件');
+        return;
+      }
+      
+      // 文件选择时已经检测过端口，如果端口为0说明检测失败，不允许升级
+      if (currentFota.port === 0) {
+        const fotaPortHint = document.getElementById('fotaPortHint');
+        alert('文件验证失败，请重新选择正确的文件');
+        fotaPortHint.style.color = '#ef4444';
         return;
       }
 
@@ -3062,6 +3349,8 @@ def index():
 
       const startTs = Date.now();
       const totalSize = file.size;
+      const fotaStep = document.getElementById('fotaStep');
+      const fotaProgress = document.getElementById('fotaProgress');
       fotaStep.textContent = '开始上传...';
       fotaProgress.textContent = '';
 
@@ -3197,8 +3486,7 @@ def index():
               <button class="btn" onclick="openDownload('${item.server_name}','${item.server_ip}',9999)" style="margin-top: 4px;">下载9999</button>
             </td>
             <td>
-              <button class="btn" onclick="openFota('${item.server_name}','${item.server_ip}',22)" ${item.fota_status_22 ? 'disabled style="opacity: 0.5;"' : ''}>FOTA 22</button>
-              <button class="btn" onclick="openFota('${item.server_name}','${item.server_ip}',9999)" ${item.fota_status_9999 ? 'disabled style="opacity: 0.5;"' : ''}>FOTA 9999</button>
+              <button class="btn" onclick="openFota('${item.server_name}','${item.server_ip}')" ${(item.fota_status_22 || item.fota_status_9999) ? 'disabled style="opacity: 0.5;"' : ''}>FOTA升级</button>
             </td>
             <td>${item.timestamp}</td>
           `;
@@ -3678,6 +3966,31 @@ def index():
         alert('请先选择至少一个服务器');
         return;
       }
+      
+      // **关键：在打开弹窗前先检测服务器类型是否一致**
+      const servers = [];
+      for (const key in selectedServers) {
+        servers.push(selectedServers[key]);
+      }
+      
+      const serverTypes = new Set();
+      servers.forEach(srv => {
+        if (srv.name.startsWith('LP-8650')) {
+          serverTypes.add('LP-8650');
+        } else if (srv.name.startsWith('LP-8797')) {
+          serverTypes.add('LP-8797');
+        }
+      });
+      
+      // 如果混合了不同类型的服务器，显示错误提示弹窗
+      if (serverTypes.size > 1) {
+        const typesList = Array.from(serverTypes).join('、');
+        const errorMessage = `批量FOTA不支持混合不同服务器类型。\n\n检测到服务器类型: ${typesList}\n\n请选择相同类型的服务器进行批量升级。`;
+        showBatchFotaError(errorMessage);
+        return;
+      }
+      
+      // 服务器类型一致，正常打开批量FOTA弹窗
       const batchFotaBackdrop = document.getElementById('batchFotaModal');
       const batchServerList = document.getElementById('batchServerList');
       const batchServerCount = document.getElementById('batchServerCount');
@@ -3687,8 +4000,6 @@ def index():
       const batchFotaStep = document.getElementById('batchFotaStep');
       const batchFotaTasks = document.getElementById('batchFotaTasks');
       const batchFotaCancelBtn = document.getElementById('batchFotaCancelBtn');
-      const batchFotaStart22Btn = document.getElementById('batchFotaStart22Btn');
-      const batchFotaStart9999Btn = document.getElementById('batchFotaStart9999Btn');
 
       // 重置状态
       currentBatchId = null;
@@ -3704,8 +4015,13 @@ def index():
       batchFotaStep.textContent = '等待选择文件...';
       batchFotaTasks.innerHTML = '';
       batchFotaCancelBtn.style.display = 'none';
-      batchFotaStart22Btn.style.display = 'inline-block';
-      batchFotaStart9999Btn.style.display = 'inline-block';
+      const batchFotaStartBtn = document.getElementById('batchFotaStartBtn');
+      const batchFotaPortHint = document.getElementById('batchFotaPortHint');
+      batchFotaStartBtn.style.display = 'inline-block';
+      batchFotaStartBtn.disabled = false;
+      batchFotaPortHint.textContent = '请选择文件，系统将自动检测端口并验证文件匹配';
+      batchFotaPortHint.style.color = '#6b7280';
+      currentBatchFotaPort = 0;  // 重置端口
 
       let serverListHtml = '';
       for (const key in selectedServers) {
@@ -3714,7 +4030,93 @@ def index():
       }
       batchServerList.innerHTML = serverListHtml;
 
+      // 移除之前的事件监听器（如果存在），避免重复绑定
+      const newBatchFotaFile = batchFotaFile.cloneNode(true);
+      batchFotaFile.parentNode.replaceChild(newBatchFotaFile, batchFotaFile);
+      
+      // 监听文件选择，自动检测端口和验证文件匹配
+      newBatchFotaFile.addEventListener('change', async function() {
+        const batchFotaPortHint = document.getElementById('batchFotaPortHint');
+        const batchFotaStartBtn = document.getElementById('batchFotaStartBtn');
+        
+        const file = this.files[0];
+        if (!file) {
+          batchFotaPortHint.textContent = '请选择文件';
+          batchFotaPortHint.style.color = '#6b7280';
+          currentBatchFotaPort = 0;
+          batchFotaStartBtn.disabled = false;
+          return;
+        }
+        
+        // 检查服务器类型是否一致（在openBatchFota中已经检查过，这里再次检查以防服务器选择发生变化）
+        const servers = [];
+        for (const key in selectedServers) {
+          servers.push(selectedServers[key]);
+        }
+        
+        if (servers.length === 0) {
+          batchFotaPortHint.textContent = '请先选择至少一个服务器';
+          batchFotaPortHint.style.color = '#ef4444';
+          currentBatchFotaPort = 0;
+          batchFotaStartBtn.disabled = true;
+          return;
+        }
+        
+        const serverTypes = new Set();
+        servers.forEach(srv => {
+          if (srv.name.startsWith('LP-8650')) {
+            serverTypes.add('LP-8650');
+          } else if (srv.name.startsWith('LP-8797')) {
+            serverTypes.add('LP-8797');
+          }
+        });
+        
+        if (serverTypes.size > 1) {
+          // 如果检测到混合类型，关闭批量FOTA弹窗，显示错误提示
+          document.getElementById('batchFotaModal').style.display = 'none';
+          const typesList = Array.from(serverTypes).join('、');
+          const errorMessage = `批量FOTA不支持混合不同服务器类型。\n\n检测到服务器类型: ${typesList}\n\n请选择相同类型的服务器进行批量升级。`;
+          showBatchFotaError(errorMessage);
+          return;
+        }
+        
+        // 显示检测中
+        batchFotaPortHint.textContent = '正在检测端口和验证文件匹配...';
+        batchFotaPortHint.style.color = '#3b82f6';
+        batchFotaStartBtn.disabled = true;
+        
+        // 调用检测接口
+        const result = await detectFotaPort(servers[0].name, file.name);
+        
+        if (result.port > 0) {
+          currentBatchFotaPort = result.port;
+          const serverType = Array.from(serverTypes)[0] || '未知';
+          batchFotaPortHint.textContent = `✓ 检测到端口: ${result.port}，服务器类型: ${serverType} (${result.message})`;
+          batchFotaPortHint.style.color = '#10b981';
+          batchFotaStartBtn.disabled = false;
+        } else {
+          currentBatchFotaPort = 0;
+          // 错误信息可能包含换行，需要格式化显示
+          const errorMsg = result.message.replace(/\\n/g, '<br>');
+          batchFotaPortHint.innerHTML = `✗ ${errorMsg}`;
+          batchFotaPortHint.style.color = '#ef4444';
+          batchFotaStartBtn.disabled = true;
+        }
+      });
+
       batchFotaBackdrop.style.display = 'flex';
+    }
+
+    function showBatchFotaError(message) {
+      const errorModal = document.getElementById('batchFotaErrorModal');
+      const errorMessageDiv = document.getElementById('batchFotaErrorMessage');
+      // 将换行符转换为HTML换行
+      errorMessageDiv.innerHTML = message.replace(/\\n/g, '<br>');
+      errorModal.style.display = 'flex';
+    }
+
+    function closeBatchFotaError() {
+      document.getElementById('batchFotaErrorModal').style.display = 'none';
     }
 
     function closeBatchFota() {
@@ -3757,7 +4159,7 @@ def index():
       });
     }
 
-    function startBatchFota(port) {
+    async function startBatchFota() {
       const file = document.getElementById('batchFotaFile').files[0];
       if (!file) {
         alert('请先选择文件');
@@ -3769,18 +4171,30 @@ def index():
         servers.push(selectedServers[key]);
       }
 
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('port', port);
-      fd.append('servers', JSON.stringify(servers));
+      if (servers.length === 0) {
+        alert('请先选择至少一个服务器');
+        return;
+      }
+
+      // 文件选择时已经检测过端口，如果端口为0说明检测失败，不允许升级
+      if (currentBatchFotaPort === 0) {
+        const batchFotaPortHint = document.getElementById('batchFotaPortHint');
+        alert('文件验证失败，请重新选择正确的文件');
+        batchFotaPortHint.style.color = '#ef4444';
+        return;
+      }
 
       const batchFotaProgress = document.getElementById('batchFotaProgress');
       const batchFotaStep = document.getElementById('batchFotaStep');
       const batchFotaTasks = document.getElementById('batchFotaTasks');
       const batchFotaTaskDetails = document.getElementById('batchFotaTaskDetails');
       const batchFotaCancelBtn = document.getElementById('batchFotaCancelBtn');
-      const batchFotaStart22Btn = document.getElementById('batchFotaStart22Btn');
-      const batchFotaStart9999Btn = document.getElementById('batchFotaStart9999Btn');
+      const batchFotaStartBtn = document.getElementById('batchFotaStartBtn');
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('port', currentBatchFotaPort);  // 使用检测到的端口
+      fd.append('servers', JSON.stringify(servers));
 
       batchFotaStep.textContent = `开始批量FOTA (${port}端口)...`;
       batchFotaProgress.textContent = '';
@@ -3788,8 +4202,7 @@ def index():
       batchFotaTaskDetails.innerHTML = '';
       batchFotaTaskDetails.style.display = 'block';
       batchFotaCancelBtn.style.display = 'inline-block';
-      batchFotaStart22Btn.style.display = 'none';
-      batchFotaStart9999Btn.style.display = 'none';
+      batchFotaStartBtn.style.display = 'none';
 
       const totalSize = file.size;
       const taskStartTimes = {}; // {taskKey: startTime}
@@ -3801,8 +4214,7 @@ def index():
         if (!data.ok || !data.batch_id) {
           batchFotaStep.textContent = `失败: ${data.error || '未知错误'}`;
           batchFotaCancelBtn.style.display = 'none';
-          batchFotaStart22Btn.style.display = 'inline-block';
-          batchFotaStart9999Btn.style.display = 'inline-block';
+          batchFotaStartBtn.style.display = 'inline-block';
           return;
         }
 
