@@ -1231,6 +1231,241 @@ def api_batch_upload_cancel(batch_id):
         return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
 
 
+@app.route("/api/upload-folder", methods=["POST"])
+def api_upload_folder():
+    """多文件/文件夹上传接口 - 支持保持文件夹结构或平铺上传"""
+    try:
+        server_name = request.form.get("server_name", "").strip()
+        server_ip = request.form.get("server_ip", "").strip()
+        port = int(request.form.get("port", 0))
+        target_dir = request.form.get("target_dir", "").strip() or upload_target_dir
+        preserve_structure = request.form.get("preserve_structure", "false").lower() == "true"
+        files = request.files.getlist("files")
+
+        if not server_name or not server_ip or port not in (22, 9999):
+            return jsonify({"ok": False, "error": "参数缺失或端口非法"}), 400
+        if not files or len(files) == 0:
+            return jsonify({"ok": False, "error": "未选择文件"}), 400
+
+        task_id = str(uuid.uuid4())
+        
+        # 准备文件列表（包含相对路径信息）
+        file_list = []
+        for file in files:
+            if preserve_structure:
+                # 文件夹模式：保持相对路径结构
+                relative_path = file.filename  # 包含相对路径，如 "folder/subfolder/file.txt"
+                filename = os.path.basename(file.filename)
+            else:
+                # 多文件模式：所有文件平铺到目标目录
+                relative_path = os.path.basename(file.filename)  # 只有文件名
+                filename = os.path.basename(file.filename)
+            
+            file_list.append({
+                "file": file,
+                "relative_path": relative_path,
+                "filename": filename
+            })
+        
+        with upload_tasks_lock:
+            upload_tasks[task_id] = {
+                "progress": 0,
+                "status": "uploading",
+                "result": None,
+                "file_index": 0,
+                "total_files": len(file_list),
+                "success_count": 0,
+                "fail_count": 0,
+                "current_file": ""
+            }
+        
+        def do_upload_folder():
+            success_count = 0
+            fail_count = 0
+            total_files = len(file_list)
+            
+            try:
+                for idx, file_info in enumerate(file_list):
+                    file = file_info["file"]
+                    relative_path = file_info["relative_path"]
+                    filename = file_info["filename"]
+                    
+                    # 更新当前文件信息
+                    with upload_tasks_lock:
+                        if task_id in upload_tasks:
+                            upload_tasks[task_id]["file_index"] = idx + 1
+                            upload_tasks[task_id]["current_file"] = relative_path
+                    
+                    # 构建目标路径：target_dir + 相对路径
+                    # 例如：target_dir="/tmp", relative_path="folder/sub/file.txt"
+                    # 结果："/tmp/folder/sub/file.txt"
+                    target_path = posixpath.join(target_dir, relative_path)
+                    target_path = posixpath.normpath(target_path)  # 规范化路径
+                    
+                    # 确保目标目录存在
+                    target_file_dir = posixpath.dirname(target_path)
+                    
+                    # 保存文件到临时文件
+                    import tempfile
+                    import shutil
+                    temp_file_path = None
+                    file_obj = None
+                    
+                    try:
+                        temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='upload_folder_', suffix='.tmp')
+                        temp_file_path = temp_file.name
+                        shutil.copyfileobj(file.stream, temp_file, length=8*1024*1024)
+                        temp_file.close()
+                        temp_file = None
+                        
+                        file_size = os.path.getsize(temp_file_path)
+                        file_obj = open(temp_file_path, 'rb')
+                        
+                        # 创建SFTP连接并确保目录存在
+                        transport = create_transport(server_ip, port, server_name)
+                        sftp = paramiko.SFTPClient.from_transport(transport)
+                        
+                        try:
+                            # 确保目标目录存在
+                            ensure_remote_dir(sftp, target_file_dir)
+                            
+                            # 上传文件
+                            def progress_cb(loaded, total):
+                                # 计算整体进度：已完成文件 + 当前文件进度
+                                file_progress = (loaded / total) if total > 0 else 0
+                                overall_progress = int(((idx + file_progress) / total_files) * 100)
+                                with upload_tasks_lock:
+                                    if task_id in upload_tasks:
+                                        upload_tasks[task_id]["progress"] = overall_progress
+                            
+                            ok, info = sftp_upload(
+                                server_name, server_ip, port,
+                                target_file_dir, filename,
+                                stream=file_obj, file_size=file_size,
+                                progress_callback=progress_cb,
+                                check_disk_space=True,
+                                check_file_exists=True
+                            )
+                            
+                            if ok:
+                                success_count += 1
+                            else:
+                                fail_count += 1
+                                log_srv(f"文件夹上传失败 [{relative_path}]: {info}")
+                        finally:
+                            sftp.close()
+                            transport.close()
+                    except Exception as e:
+                        fail_count += 1
+                        log_srv(f"文件夹上传异常 [{relative_path}]: {e}")
+                    finally:
+                        if file_obj:
+                            try:
+                                file_obj.close()
+                            except:
+                                pass
+                        if temp_file_path and os.path.exists(temp_file_path):
+                            try:
+                                os.unlink(temp_file_path)
+                            except:
+                                pass
+                
+                # 更新最终结果
+                with upload_tasks_lock:
+                    upload_tasks[task_id] = {
+                        "progress": 100,
+                        "status": "done",
+                        "result": {
+                            "ok": True,
+                            "success_count": success_count,
+                            "fail_count": fail_count,
+                            "total_files": total_files
+                        },
+                        "file_index": total_files,
+                        "total_files": total_files,
+                        "success_count": success_count,
+                        "fail_count": fail_count,
+                        "current_file": ""
+                    }
+            except Exception as e:
+                with upload_tasks_lock:
+                    upload_tasks[task_id] = {
+                        "progress": 100,
+                        "status": "error",
+                        "result": {"ok": False, "error": str(e)},
+                        "file_index": 0,
+                        "total_files": total_files,
+                        "success_count": success_count,
+                        "fail_count": fail_count,
+                        "current_file": ""
+                    }
+                log_srv(f"文件夹上传异常: {e}")
+        
+        threading.Thread(target=do_upload_folder, daemon=True).start()
+        return jsonify({"ok": True, "task_id": task_id})
+    except Exception as e:
+        log_srv(f"upload-folder exception: {e}")
+        return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
+
+
+@app.route("/api/upload-folder/progress/<task_id>")
+def api_upload_folder_progress(task_id):
+    """SSE 推送文件夹上传进度"""
+    def generate():
+        last_progress = -1
+        import time as time_module
+        last_send_time = time_module.time()
+        
+        while True:
+            with upload_tasks_lock:
+                task = upload_tasks.get(task_id)
+            
+            if not task:
+                yield f"data: {json.dumps({'error': '任务不存在'})}\n\n"
+                break
+            
+            current_progress = task.get("progress", 0)
+            status = task.get("status", "uploading")
+            result = task.get("result")
+            file_index = task.get("file_index", 0)
+            total_files = task.get("total_files", 0)
+            current_file = task.get("current_file", "")
+            
+            # 如果状态改变或进度改变，发送更新
+            current_time = time_module.time()
+            should_send = (
+                current_progress != last_progress or
+                (current_time - last_send_time) >= 1.0  # 至少每秒发送一次
+            )
+            
+            if should_send:
+                data = {
+                    "progress": current_progress,
+                    "status": status,
+                    "file_index": file_index,
+                    "total_files": total_files,
+                    "current_file": current_file
+                }
+                
+                if status == "done":
+                    data["result"] = result
+                    yield f"data: {json.dumps(data)}\n\n"
+                    break
+                elif status == "error":
+                    data["result"] = result
+                    yield f"data: {json.dumps(data)}\n\n"
+                    break
+                else:
+                    yield f"data: {json.dumps(data)}\n\n"
+                
+                last_progress = current_progress
+                last_send_time = current_time
+            
+            time_module.sleep(0.3)
+    
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+
 @app.route("/api/upload/progress/<task_id>")
 def api_upload_progress(task_id):
     """SSE 推送上传进度"""
@@ -2785,8 +3020,83 @@ def index():
       <div>端口：<span id="uploadPort"></span></div>
       <label>目标目录</label>
       <input type="text" id="targetDir" placeholder="例如 /tmp">
-      <label style="margin-top:8px;">选择文件</label>
-      <input type="file" id="fileInput">
+      <label style="margin-top:8px;">选择文件或文件夹</label>
+      <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+        <input type="file" id="fileInput" multiple style="flex: 1;" onchange="updateSelectedFiles()">
+        <input type="file" id="folderInput" webkitdirectory style="flex: 1; display: none;" onchange="updateSelectedFiles()">
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+        <button class="btn" onclick="switchUploadMode('file')" id="fileModeBtn" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 6px;">多文件</button>
+        <button class="btn" onclick="switchUploadMode('folder')" id="folderModeBtn" style="flex: 1; background: #6b7280; color: #fff; border: none; padding: 6px;">文件夹</button>
+      </div>
+      <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+        提示：多文件模式可选择多个文件，文件夹模式保持目录结构。
+      </div>
+      <div id="selectedFilesList" style="margin-top: 8px; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; display: none;">
+        <div style="font-size: 13px; color: #374151; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 4px; height: 16px; background: #3b82f6; border-radius: 2px;"></span>
+          已选择文件 (<span id="selectedFilesCount" style="color: #3b82f6; font-weight: 700;">0</span>)
+        </div>
+        <div id="selectedFilesContent" style="font-size: 12px; color: #374151;"></div>
+      </div>
+      <style>
+        #selectedFilesList::-webkit-scrollbar {
+          width: 8px;
+        }
+        #selectedFilesList::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        #selectedFilesList::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        #selectedFilesList::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        .file-item {
+          padding: 6px 8px;
+          margin: 2px 0;
+          border-radius: 4px;
+          background: #ffffff;
+          border-left: 3px solid #e5e7eb;
+          transition: all 0.2s;
+        }
+        .file-item:hover {
+          background: #f8fafc;
+          border-left-color: #3b82f6;
+        }
+        .file-item-folder {
+          border-left-color: #10b981;
+        }
+        .file-item-folder:hover {
+          border-left-color: #059669;
+        }
+        .file-name {
+          color: #1f2937;
+          font-weight: 500;
+          word-break: break-all;
+        }
+        .file-path {
+          color: #4b5563;
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-size: 11px;
+          word-break: break-all;
+          margin-top: 2px;
+        }
+        .file-size {
+          color: #6b7280;
+          font-size: 11px;
+          margin-left: 8px;
+        }
+        .file-icon {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          margin-right: 6px;
+          vertical-align: middle;
+        }
+      </style>
       <div class="progress" id="uploadProgress"></div>
       <div class="modal-actions">
         <button class="btn" onclick="closeUpload()">取消</button>
@@ -3127,25 +3437,163 @@ def index():
       }
     }
 
+    let uploadMode = 'file';  // 'file' 或 'folder'
+
+    function switchUploadMode(mode) {
+      uploadMode = mode;
+      const fileInput = document.getElementById('fileInput');
+      const folderInput = document.getElementById('folderInput');
+      const fileModeBtn = document.getElementById('fileModeBtn');
+      const folderModeBtn = document.getElementById('folderModeBtn');
+      
+      if (mode === 'file') {
+        fileInput.style.display = 'block';
+        folderInput.style.display = 'none';
+        fileModeBtn.style.background = '#3b82f6';
+        folderModeBtn.style.background = '#6b7280';
+        fileInput.value = '';
+        folderInput.value = '';
+        updateSelectedFiles();  // 清空显示
+      } else {
+        fileInput.style.display = 'none';
+        folderInput.style.display = 'block';
+        fileModeBtn.style.background = '#6b7280';
+        folderModeBtn.style.background = '#3b82f6';
+        fileInput.value = '';
+        folderInput.value = '';
+        updateSelectedFiles();  // 清空显示
+      }
+    }
+
+    function updateSelectedFiles() {
+      const fileInput = document.getElementById('fileInput');
+      const folderInput = document.getElementById('folderInput');
+      const files = uploadMode === 'file' ? fileInput.files : folderInput.files;
+      const selectedFilesList = document.getElementById('selectedFilesList');
+      const selectedFilesCount = document.getElementById('selectedFilesCount');
+      const selectedFilesContent = document.getElementById('selectedFilesContent');
+      
+      if (!files || files.length === 0) {
+        selectedFilesList.style.display = 'none';
+        return;
+      }
+      
+      selectedFilesCount.textContent = files.length;
+      selectedFilesList.style.display = 'block';
+      
+      let html = '';
+      if (uploadMode === 'folder') {
+        // 文件夹选择：显示相对路径，带层级缩进
+        const pathMap = new Map();
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const relativePath = file.webkitRelativePath || file.name;
+          const parts = relativePath.split('/');
+          const depth = parts.length - 1;
+          
+          if (!pathMap.has(depth)) {
+            pathMap.set(depth, []);
+          }
+          pathMap.get(depth).push({
+            path: relativePath,
+            name: parts[parts.length - 1],
+            depth: depth,
+            size: formatBytes(file.size)
+          });
+        }
+        
+        // 按深度排序并显示
+        const sortedDepths = Array.from(pathMap.keys()).sort((a, b) => a - b);
+        html = '<div>';
+        for (const depth of sortedDepths) {
+          const items = pathMap.get(depth);
+          items.sort((a, b) => a.path.localeCompare(b.path));
+          
+          for (const item of items) {
+            const indent = '  '.repeat(item.depth);
+            const isDirectory = item.path.endsWith('/') || item.depth > 0;
+            const icon = isDirectory ? '📁' : '📄';
+            const className = isDirectory ? 'file-item file-item-folder' : 'file-item';
+            
+            html += `
+              <div class="${className}">
+                <div class="file-name">
+                  <span class="file-icon">${icon}</span>
+                  <span style="margin-left: ${item.depth * 8}px;">${item.name}</span>
+                  <span class="file-size">${item.size}</span>
+                </div>
+                <div class="file-path">${item.path}</div>
+              </div>
+            `;
+          }
+        }
+        html += '</div>';
+      } else {
+        // 多文件选择：显示文件名和大小，带图标
+        html = '<div>';
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const size = formatBytes(file.size);
+          const ext = file.name.split('.').pop().toLowerCase();
+          let icon = '📄';
+          
+          // 根据文件扩展名选择图标
+          const iconMap = {
+            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'svg': '🖼️',
+            'pdf': '📕', 'doc': '📘', 'docx': '📘', 'xls': '📊', 'xlsx': '📊',
+            'zip': '📦', 'rar': '📦', '7z': '📦', 'tar': '📦', 'gz': '📦',
+            'mp4': '🎬', 'avi': '🎬', 'mov': '🎬', 'mp3': '🎵', 'wav': '🎵',
+            'txt': '📝', 'md': '📝', 'log': '📝',
+            'exe': '⚙️', 'msi': '⚙️', 'sh': '⚙️', 'bat': '⚙️',
+            'py': '🐍', 'js': '📜', 'html': '🌐', 'css': '🎨', 'json': '📋'
+          };
+          icon = iconMap[ext] || icon;
+          
+          html += `
+            <div class="file-item">
+              <div class="file-name">
+                <span class="file-icon">${icon}</span>
+                ${file.name}
+                <span class="file-size">${size}</span>
+              </div>
+            </div>
+          `;
+        }
+        html += '</div>';
+      }
+      
+      selectedFilesContent.innerHTML = html;
+    }
+
     function openUpload(name, ip, port) {
       currentUpload = { name, ip, port };
       uploadServer.textContent = name;
       uploadPort.textContent = port;
       targetInput.value = defaultTarget || '';
+      const fileInput = document.getElementById('fileInput');
+      const folderInput = document.getElementById('folderInput');
       fileInput.value = '';
+      folderInput.value = '';
+      const selectedFilesList = document.getElementById('selectedFilesList');
+      selectedFilesList.style.display = 'none';
       progressBox.textContent = '';
       backdrop.style.display = 'flex';
+      // 重置为文件模式
+      switchUploadMode('file');
     }
 
     function closeUpload() {
       backdrop.style.display = 'none';
     }
 
-    function uploadFile() {
-      const file = fileInput.files[0];
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const folderInput = document.getElementById('folderInput');
+      const files = uploadMode === 'file' ? fileInput.files : folderInput.files;
       const targetDir = (targetInput.value || defaultTarget || '').trim();
-      if (!file) {
-        alert('请先选择文件');
+      
+      if (!files || files.length === 0) {
+        alert('请先选择文件或文件夹');
         return;
       }
       if (!targetDir) {
@@ -3153,18 +3601,99 @@ def index():
         return;
       }
 
+      // 如果是单个文件且是多文件模式，使用原有的单文件上传逻辑
+      if (files.length === 1 && uploadMode === 'file') {
+        const file = files[0];
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('server_name', currentUpload.name);
+        fd.append('server_ip', currentUpload.ip);
+        fd.append('port', currentUpload.port);
+        fd.append('target_dir', targetDir);
+
+        const startTs = Date.now();
+        const totalSize = file.size;
+        progressBox.textContent = '开始上传...';
+
+        fetch('/api/upload', {
+          method: 'POST',
+          body: fd
+        }).then(res => res.json()).then(data => {
+          if (!data.ok || !data.task_id) {
+            progressBox.textContent = `失败: ${data.error || '未知错误'}`;
+            return;
+          }
+
+          const taskId = data.task_id;
+          const es = new EventSource(`/api/upload/progress/${taskId}`);
+          
+          es.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if (msg.error) {
+              progressBox.textContent = `失败: ${msg.error}`;
+              es.close();
+              return;
+            }
+
+            const percent = msg.progress || 0;
+            const elapsed = Math.max((Date.now() - startTs) / 1000, 0.001);
+            const loaded = Math.floor(totalSize * percent / 100);
+            const speed = formatSpeed(loaded, elapsed);
+            
+            if (msg.status === 'uploading') {
+              progressBox.textContent = `上传进度: ${percent}% (${formatBytes(loaded)}/${formatBytes(totalSize)}, ${speed})`;
+            } else if (msg.status === 'done') {
+              es.close();
+              if (msg.result && msg.result.ok) {
+                let doneText = `上传成功: ${msg.result.path || '成功'}`;
+                if (msg.result.exists) {
+                  doneText += ' (文件已存在，已覆盖)';
+                }
+                progressBox.textContent = doneText;
+                progressBox.style.color = '#166534';
+              } else {
+                progressBox.textContent = `失败: ${msg.result?.error || '未知错误'}`;
+                progressBox.style.color = '#991b1b';
+              }
+              setTimeout(() => {
+                closeUpload();
+              }, 1500);
+            } else if (msg.status === 'error') {
+              es.close();
+              progressBox.textContent = `失败: ${msg.result?.error || '未知错误'}`;
+            }
+          };
+
+          es.onerror = () => {
+            es.close();
+            progressBox.textContent = '进度监听失败';
+          };
+        }).catch(err => {
+          progressBox.textContent = `上传失败: ${err}`;
+        });
+        return;
+      }
+
+      // 多个文件上传（多文件或文件夹）
       const fd = new FormData();
-      fd.append('file', file);
+      for (let i = 0; i < files.length; i++) {
+        fd.append('files', files[i]);
+      }
       fd.append('server_name', currentUpload.name);
       fd.append('server_ip', currentUpload.ip);
       fd.append('port', currentUpload.port);
       fd.append('target_dir', targetDir);
+      fd.append('preserve_structure', uploadMode === 'folder' ? 'true' : 'false');  // 文件夹模式保持结构
 
       const startTs = Date.now();
-      const totalSize = file.size;
-      progressBox.textContent = '开始上传...';
+      let totalSize = 0;
+      for (let i = 0; i < files.length; i++) {
+        totalSize += files[i].size;
+      }
+      const modeText = uploadMode === 'folder' ? '文件夹' : '多文件';
+      progressBox.textContent = `开始上传${modeText} (${files.length} 个文件)...`;
 
-      fetch('/api/upload', {
+      fetch('/api/upload-folder', {
         method: 'POST',
         body: fd
       }).then(res => res.json()).then(data => {
@@ -3174,7 +3703,7 @@ def index():
         }
 
         const taskId = data.task_id;
-        const es = new EventSource(`/api/upload/progress/${taskId}`);
+        const es = new EventSource(`/api/upload-folder/progress/${taskId}`);
         
         es.onmessage = (e) => {
           const msg = JSON.parse(e.data);
@@ -3190,23 +3719,32 @@ def index():
           const speed = formatSpeed(loaded, elapsed);
           
           if (msg.status === 'uploading') {
-            progressBox.textContent = `上传进度: ${percent}% (${formatBytes(loaded)}/${formatBytes(totalSize)}, ${speed})`;
+            const currentFile = msg.current_file || '';
+            const fileIndex = msg.file_index || 0;
+            const totalFiles = msg.total_files || files.length;
+            let progressText = `上传进度: ${percent}% (${fileIndex}/${totalFiles} 文件, ${formatBytes(loaded)}/${formatBytes(totalSize)}, ${speed})`;
+            if (currentFile) {
+              progressText += ` - 当前: ${currentFile}`;
+            }
+            progressBox.textContent = progressText;
           } else if (msg.status === 'done') {
             es.close();
             if (msg.result && msg.result.ok) {
-              let doneText = `上传成功: ${msg.result.path || '成功'}`;
-              if (msg.result.exists) {
-                doneText += ' (文件已存在，已覆盖)';
+              const successCount = msg.result.success_count || 0;
+              const failCount = msg.result.fail_count || 0;
+              let doneText = `上传完成: 成功 ${successCount} 个文件`;
+              if (failCount > 0) {
+                doneText += `，失败 ${failCount} 个文件`;
               }
               progressBox.textContent = doneText;
-              progressBox.style.color = '#166534';
+              progressBox.style.color = failCount > 0 ? '#f59e0b' : '#166534';
             } else {
               progressBox.textContent = `失败: ${msg.result?.error || '未知错误'}`;
               progressBox.style.color = '#991b1b';
             }
             setTimeout(() => {
               closeUpload();
-            }, 1500);
+            }, 2000);
           } else if (msg.status === 'error') {
             es.close();
             progressBox.textContent = `失败: ${msg.result?.error || '未知错误'}`;
