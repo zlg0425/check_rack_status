@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--ip", required=True, help="目标IP")
     parser.add_argument("--port", type=int, default=22, help="端口，默认22")
     parser.add_argument("--file", required=True, help="待升级文件的远端绝对路径")
-    parser.add_argument("--log", default="ucm_test.log", help="本地日志文件，默认 ucm_test.log")
+    parser.add_argument("--log", default="logs/ucm_log/ucm_test.log", help="本地日志文件，默认 logs/ucm_log/ucm_test.log")
     parser.add_argument("--tail-wait", type=int, default=2, help="A结束后继续收集日志秒数")
     args = parser.parse_args()
 

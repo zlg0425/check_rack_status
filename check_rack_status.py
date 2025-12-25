@@ -168,6 +168,79 @@ def fetch_version_via_sftp(transport: paramiko.Transport, path: str):
         return False, str(e)
 
 
+def validate_remote_path(path: str):
+    """验证远程路径，防止路径遍历攻击
+    Args:
+        path: 要验证的路径
+    Returns:
+        (is_valid, error_message): 如果有效返回(True, None)，否则返回(False, 错误信息)
+    """
+    if not path:
+        return False, "路径不能为空"
+    
+    # 检查路径遍历攻击（../, ..\, 等）
+    if ".." in path:
+        return False, "路径不能包含 '..'，防止路径遍历攻击"
+    
+    # 检查绝对路径（允许）
+    # 检查特殊字符
+    forbidden_chars = ['\x00', '\r', '\n']
+    for char in forbidden_chars:
+        if char in path:
+            return False, f"路径包含非法字符: {repr(char)}"
+    
+    return True, None
+
+
+def check_remote_disk_space(sftp: paramiko.SFTPClient, path: str, required_size: int):
+    """检查远程磁盘空间
+    Args:
+        sftp: SFTP客户端
+        path: 目标路径
+        required_size: 需要的磁盘空间（字节）
+    Returns:
+        (has_space, error_message): 如果有足够空间返回(True, None)，否则返回(False, 错误信息)
+    """
+    try:
+        # 尝试使用statvfs获取磁盘空间信息
+        # 注意：不是所有SFTP服务器都支持statvfs
+        try:
+            statvfs = sftp.statvfs(path)
+            free_space = statvfs.f_bavail * statvfs.f_frsize
+            if free_space < required_size:
+                return False, f"远程磁盘空间不足，需要 {required_size} 字节，可用 {free_space} 字节"
+            return True, None
+        except (IOError, AttributeError):
+            # statvfs不支持或失败，尝试使用df命令（需要SSH连接）
+            # 这里先跳过检查，返回成功
+            # 实际应用中可以通过SSH执行df命令来检查
+            return True, None
+    except Exception as e:
+        # 检查失败，但不阻止上传（可能是权限问题或服务器不支持）
+        return True, None
+
+
+def check_remote_file_exists(sftp: paramiko.SFTPClient, remote_path: str):
+    """检查远程文件是否存在
+    Args:
+        sftp: SFTP客户端
+        remote_path: 远程文件路径
+    Returns:
+        (exists, is_directory, error_message): 
+            exists: 文件是否存在
+            is_directory: 如果是目录返回True
+            error_message: 错误信息（如果检查失败）
+    """
+    try:
+        stat = sftp.stat(remote_path)
+        is_directory = stat.st_mode & 0o040000
+        return True, is_directory, None
+    except IOError:
+        return False, False, None
+    except Exception as e:
+        return False, False, str(e)
+
+
 def ensure_remote_dir(sftp: paramiko.SFTPClient, remote_path: str):
     """确保远端目录存在"""
     parts = [p for p in remote_path.split("/") if p]
@@ -180,7 +253,7 @@ def ensure_remote_dir(sftp: paramiko.SFTPClient, remote_path: str):
             sftp.mkdir(current)
 
 
-def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename: str, data=None, progress_callback=None, stream=None, file_size=None):
+def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename: str, data=None, progress_callback=None, stream=None, file_size=None, check_disk_space=True, check_file_exists=True):
     """将文件上传到指定服务器和端口，支持进度回调
     统一使用流式上传模式，支持stream参数（文件流）或data参数（bytes，内部转换为流）
     
@@ -194,8 +267,22 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         progress_callback: 进度回调函数
         stream: 文件流对象，优先使用
         file_size: 文件大小（字节），必需
+        check_disk_space: 是否检查磁盘空间（默认True）
+        check_file_exists: 是否检查文件是否存在（默认True，返回信息但不阻止上传）
+    Returns:
+        (success, result): success为True时result是文件路径，为False时result是错误信息或文件存在信息
+            如果check_file_exists=True且文件存在，返回(True, {"path": remote_path, "exists": True, "is_directory": False})
     """
     import io
+    
+    # 验证路径，防止路径遍历攻击
+    path_valid, path_error = validate_remote_path(target_dir)
+    if not path_valid:
+        return False, f"目标目录路径无效: {path_error}"
+    
+    path_valid, path_error = validate_remote_path(filename)
+    if not path_valid:
+        return False, f"文件名无效: {path_error}"
     
     auth_mode = resolve_auth_mode(server_name)
     safe_dir = target_dir.rstrip("/") or "/"
@@ -230,7 +317,14 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
     
     def putfo_progress_callback(transferred, total):
         if progress_callback:
-            progress_callback(transferred, total)
+            try:
+                progress_callback(transferred, total)
+            except Exception as e:
+                # 如果进度回调抛出异常（如取消），重新抛出以停止上传
+                if "任务已取消" in str(e) or "取消" in str(e):
+                    raise
+                # 其他异常忽略，继续上传
+                pass
 
     if auth_mode == "none":
         try:
@@ -242,10 +336,30 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
             sftp = paramiko.SFTPClient.from_transport(transport)
             ensure_remote_dir(sftp, safe_dir)
             
+            # 检查文件是否存在
+            file_exists_info = None
+            if check_file_exists:
+                exists, is_dir, error = check_remote_file_exists(sftp, remote_path)
+                if exists:
+                    if is_dir:
+                        return False, f"目标路径是目录而不是文件: {remote_path}"
+                    file_exists_info = {"exists": True, "is_directory": False}
+            
+            # 检查磁盘空间
+            if check_disk_space:
+                has_space, space_error = check_remote_disk_space(sftp, safe_dir, total_size)
+                if not has_space:
+                    sftp.close()
+                    transport.close()
+                    return False, space_error
+            
             # 使用putfo方法上传，支持流式上传
             sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             sftp.close()
             transport.close()
+            
+            if file_exists_info:
+                return True, {"path": remote_path, "exists": True, "is_directory": False}
             return True, remote_path
         except Exception as e:
             return False, str(e)
@@ -263,10 +377,32 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         sftp = paramiko.SFTPClient.from_transport(transport)
         ensure_remote_dir(sftp, safe_dir)
         
+        # 检查文件是否存在
+        file_exists_info = None
+        if check_file_exists:
+            exists, is_dir, error = check_remote_file_exists(sftp, remote_path)
+            if exists:
+                if is_dir:
+                    sftp.close()
+                    transport.close()
+                    return False, f"目标路径是目录而不是文件: {remote_path}"
+                file_exists_info = {"exists": True, "is_directory": False}
+        
+        # 检查磁盘空间
+        if check_disk_space:
+            has_space, space_error = check_remote_disk_space(sftp, safe_dir, total_size)
+            if not has_space:
+                sftp.close()
+                transport.close()
+                return False, space_error
+        
         # 使用putfo方法上传，支持流式上传
         sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
         sftp.close()
         transport.close()
+        
+        if file_exists_info:
+            return True, {"path": remote_path, "exists": True, "is_directory": False}
         return True, remote_path
     except Exception as e:
         return False, str(e)
@@ -806,11 +942,27 @@ def create_transport(server_name: str, ip: str, port: int) -> paramiko.Transport
 
 def run_ucm_with_log(server_name: str, ip: str, port: int, ucm_file: str, log_file: str = None, tail_wait: int = 2):
     """启动日志会话B，2秒后启动A执行 lpUCM，A 结束后再等待 tail_wait 秒再停止日志。返回 (ok, info)。"""
+    import os
+    import time
+    
     if log_file is None:
-        import time
+        # 确保日志目录存在
+        log_dir = "logs/ucm_log"
+        os.makedirs(log_dir, exist_ok=True)
         # 将时间戳转换为具体时间格式：YYYYMMDD_HHMMSS
         time_str = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-        log_file = f"ucm_{server_name}_{ip}_{port}_{time_str}.log"
+        log_file = os.path.join(log_dir, f"ucm_{server_name}_{ip}_{port}_{time_str}.log")
+    else:
+        # 如果指定了日志文件，检查是否为相对路径（只有文件名）
+        log_dir = os.path.dirname(log_file)
+        if not log_dir:
+            # 只有文件名，使用默认日志目录
+            log_dir = "logs/ucm_log"
+            os.makedirs(log_dir, exist_ok=True)
+            log_file = os.path.join(log_dir, log_file)
+        else:
+            # 有目录路径，确保目录存在
+            os.makedirs(log_dir, exist_ok=True)
     log_stop = threading.Event()
     log_err = []
 

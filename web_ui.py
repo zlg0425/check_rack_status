@@ -10,6 +10,8 @@ import uuid
 import json
 import zipfile
 import io
+import multiprocessing
+import sys
 from flask import Flask, jsonify, render_template_string, request, Response, stream_with_context
 from check_rack_status import (
     load_config,
@@ -48,13 +50,31 @@ status_cache = {
     "error": "",
 }
 cache_lock = threading.Lock()
-FOTA_LOG = "fota.log"
-BACKEND_LOG = "backend.log"
+FOTA_LOG = "logs/fota.log"
+BACKEND_LOG = "logs/backend.log"
 FOTA_TIMING_STATS_FILE = "fota_timing_stats.json"
 
 # 上传任务进度字典 {task_id: {"progress": 0-100, "status": "uploading|done|error", "result": {...}}}
 upload_tasks = {}
 upload_tasks_lock = threading.Lock()
+
+# 批量上传任务字典 {batch_id: {"tasks": {task_id: {...}}, "temp_files": [...], "file_info_list": [...], "target_dir": "...", "port": ...}}
+# 使用multiprocessing.Manager来支持进程间共享（延迟初始化，避免在Windows上出现问题）
+batch_upload_manager = None
+batch_upload_tasks_dict = {}
+batch_upload_tasks_lock = threading.Lock()
+
+def get_batch_upload_manager():
+    """获取或创建批量上传管理器（延迟初始化）"""
+    global batch_upload_manager, batch_upload_tasks_dict, batch_upload_tasks_lock
+    if batch_upload_manager is None:
+        # Windows上需要使用spawn启动方式
+        if sys.platform == 'win32':
+            multiprocessing.set_start_method('spawn', force=True)
+        batch_upload_manager = multiprocessing.Manager()
+        batch_upload_tasks_dict = batch_upload_manager.dict()
+        batch_upload_tasks_lock = batch_upload_manager.Lock()
+    return batch_upload_manager, batch_upload_tasks_dict, batch_upload_tasks_lock
 
 
 # FOTA耗时统计锁
@@ -516,12 +536,36 @@ def api_upload():
             try:
                 # 从临时文件打开文件对象用于上传
                 file_obj = open(temp_file_path, 'rb')
-                ok, info = sftp_upload(server_name, server_ip, port, target_dir, file.filename, stream=file_obj, file_size=file_size, progress_callback=progress_cb)
+                ok, info = sftp_upload(server_name, server_ip, port, target_dir, file.filename, stream=file_obj, file_size=file_size, progress_callback=progress_cb, check_disk_space=True, check_file_exists=True)
+                
+                # 处理上传结果
+                result = {}
+                if ok:
+                    if isinstance(info, dict) and info.get("exists"):
+                        # 文件已存在，但上传成功（覆盖）
+                        result = {
+                            "ok": True,
+                            "path": info.get("path"),
+                            "exists": True,
+                            "message": "文件已存在，已覆盖"
+                        }
+                    else:
+                        # 新文件上传成功
+                        result = {
+                            "ok": True,
+                            "path": info if isinstance(info, str) else info.get("path") if isinstance(info, dict) else None
+                        }
+                else:
+                    result = {
+                        "ok": False,
+                        "error": info if isinstance(info, str) else str(info)
+                    }
+                
                 with upload_tasks_lock:
                     upload_tasks[task_id] = {
                         "progress": 100,
                         "status": "done" if ok else "error",
-                        "result": {"ok": ok, "path": info if ok else None, "error": info if not ok else None}
+                        "result": result
                     }
             except Exception as e:
                 with upload_tasks_lock:
@@ -552,11 +596,562 @@ def api_upload():
         return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
 
 
+def do_batch_upload_process(tid, sname, sip, fname, finfo, tdir, p, batch_id, shared_dict, shared_lock):
+    """独立的进程函数，执行单个上传任务"""
+    import sys
+    import os
+    import json
+    import time
+    # 重新导入必要的模块（子进程需要）
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from check_rack_status import sftp_upload, load_config
+    
+    # 子进程中必须加载配置，否则resolve_key等函数无法工作
+    load_config()
+    
+    try:
+        def progress_cb(loaded, total):
+            try:
+                # 检查是否已取消
+                with shared_lock:
+                    if batch_id in shared_dict:
+                        if shared_dict[batch_id].get("cancelled", False):
+                            raise Exception("任务已取消")
+                
+                percent = int((loaded / total) * 100) if total > 0 else 0
+                with shared_lock:
+                    if batch_id in shared_dict:
+                        if shared_dict[batch_id].get("cancelled", False):
+                            raise Exception("任务已取消")
+                        if tid in shared_dict[batch_id]["tasks"]:
+                            shared_dict[batch_id]["tasks"][tid]["progress"] = percent
+                            # 如果进度达到100%，但状态还是uploading，保持uploading状态
+                            # 最终状态（done/error）会在sftp_upload返回后更新
+                            # 但为了确保前端能及时看到100%进度，我们在这里更新进度
+                            current_status = shared_dict[batch_id]["tasks"][tid].get("status", "pending")
+                            if current_status not in ("done", "error", "cancelled"):
+                                shared_dict[batch_id]["tasks"][tid]["status"] = "uploading"
+            except Exception as e:
+                # 只有明确的取消异常才重新抛出
+                if "任务已取消" in str(e) or "取消" in str(e):
+                    raise
+                # 其他异常忽略，继续上传
+                pass
+        
+        # 再次检查是否已取消
+        with shared_lock:
+            if batch_id in shared_dict:
+                if shared_dict[batch_id].get("cancelled", False):
+                    raise Exception("任务已取消")
+        
+        file_obj = open(finfo["temp_path"], 'rb')
+        try:
+            ok, info = sftp_upload(sname, sip, p, tdir, fname, stream=file_obj, file_size=finfo["file_size"], progress_callback=progress_cb, check_disk_space=True, check_file_exists=True)
+            
+            # 处理上传结果
+            result = {}
+            if ok:
+                if isinstance(info, dict) and info.get("exists"):
+                    result = {
+                        "ok": True,
+                        "path": info.get("path"),
+                        "exists": True,
+                        "message": "文件已存在，已覆盖"
+                    }
+                else:
+                    result = {
+                        "ok": True,
+                        "path": info if isinstance(info, str) else info.get("path") if isinstance(info, dict) else None
+                    }
+            else:
+                result = {
+                    "ok": False,
+                    "error": info if isinstance(info, str) else str(info)
+                }
+            
+            with shared_lock:
+                if batch_id in shared_dict:
+                    if tid in shared_dict[batch_id]["tasks"]:
+                        # 更新状态前，记录旧状态用于检测变化
+                        old_status = shared_dict[batch_id]["tasks"][tid].get("status", "pending")
+                        shared_dict[batch_id]["tasks"][tid]["progress"] = 100
+                        shared_dict[batch_id]["tasks"][tid]["status"] = "done" if ok else "error"
+                        shared_dict[batch_id]["tasks"][tid]["result"] = result
+                        new_status = shared_dict[batch_id]["tasks"][tid].get("status")
+                        # 标记需要立即发送SSE更新（通过设置一个标志）
+                        # 注意：由于进程间通信的限制，我们无法直接触发SSE更新
+                        # 但可以通过缩短SSE检查间隔来确保及时检测到变化
+        finally:
+            file_obj.close()
+    except Exception as e:
+        error_msg = str(e)
+        with shared_lock:
+            if batch_id in shared_dict:
+                if shared_dict[batch_id].get("cancelled", False) and "取消" in error_msg:
+                    # 任务已取消，标记为取消状态
+                    if tid in shared_dict[batch_id]["tasks"]:
+                        shared_dict[batch_id]["tasks"][tid]["progress"] = 0
+                        shared_dict[batch_id]["tasks"][tid]["status"] = "cancelled"
+                        shared_dict[batch_id]["tasks"][tid]["result"] = {
+                            "ok": False,
+                            "error": "任务已取消"
+                        }
+                else:
+                    if tid in shared_dict[batch_id]["tasks"]:
+                        shared_dict[batch_id]["tasks"][tid]["progress"] = 100
+                        shared_dict[batch_id]["tasks"][tid]["status"] = "error"
+                        shared_dict[batch_id]["tasks"][tid]["result"] = {
+                            "ok": False,
+                            "error": error_msg
+                        }
+
+@app.route("/api/batch-upload", methods=["POST"])
+def api_batch_upload():
+    """批量上传接口"""
+    try:
+        port = int(request.form.get("port", 0))
+        servers_json = request.form.get("servers", "[]")
+        files = request.files.getlist("files")
+        target_dir = request.form.get("target_dir", "").strip() or upload_target_dir
+
+        if port not in (22, 9999):
+            return jsonify({"ok": False, "error": "端口必须是22或9999"}), 400
+        
+        try:
+            servers = json.loads(servers_json)
+        except:
+            return jsonify({"ok": False, "error": "服务器列表格式错误"}), 400
+        
+        if not servers or len(servers) == 0:
+            return jsonify({"ok": False, "error": "服务器列表为空"}), 400
+        
+        if not files or len(files) == 0:
+            return jsonify({"ok": False, "error": "未选择文件"}), 400
+
+        batch_id = str(uuid.uuid4())
+        
+        # 存储所有临时文件路径
+        temp_files = []
+        
+        try:
+            # 处理所有文件，保存到临时文件
+            import tempfile
+            import shutil
+            
+            file_info_list = []
+            total_temp_size = 0
+            for file in files:
+                if not file.filename:
+                    continue
+                    
+                file_stream = file.stream
+                temp_file = None
+                temp_file_path = None
+                try:
+                    # 检查临时文件磁盘空间（如果知道文件大小）
+                    file_size_from_request = request.content_length
+                    if file_size_from_request:
+                        try:
+                            import shutil
+                            temp_dir = tempfile.gettempdir()
+                            stat = shutil.disk_usage(temp_dir)
+                            # 预留10%的缓冲空间
+                            required_space = file_size_from_request * 1.1
+                            if stat.free < required_space + total_temp_size:
+                                raise Exception(f"临时文件磁盘空间不足，需要 {int(required_space + total_temp_size)} 字节，可用 {stat.free} 字节")
+                        except ImportError:
+                            # Python < 3.3 不支持 shutil.disk_usage，跳过检查
+                            pass
+                    
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='batch_upload_', suffix='.tmp')
+                    temp_file_path = temp_file.name
+                    temp_files.append(temp_file_path)
+                    
+                    shutil.copyfileobj(file_stream, temp_file, length=8*1024*1024)
+                    temp_file.close()
+                    temp_file = None
+                    
+                    file_size = os.path.getsize(temp_file_path)
+                    total_temp_size += file_size
+                    file_info_list.append({
+                        "filename": file.filename,
+                        "temp_path": temp_file_path,
+                        "file_size": file_size
+                    })
+                except Exception as e:
+                    if temp_file:
+                        try:
+                            temp_file.close()
+                        except:
+                            pass
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try:
+                            os.unlink(temp_file_path)
+                        except:
+                            pass
+                    raise
+            
+            if not file_info_list:
+                return jsonify({"ok": False, "error": "没有有效的文件"}), 400
+            
+            # 初始化批量上传任务
+            tasks_dict = {}
+            task_list = []
+            
+            for server in servers:
+                server_name = server.get("name", "")
+                server_ip = server.get("ip", "")
+                if not server_name or not server_ip:
+                    continue
+                
+                for file_info in file_info_list:
+                    task_id = str(uuid.uuid4())
+                    task_list.append({
+                        "task_id": task_id,
+                        "server_name": server_name,
+                        "server_ip": server_ip,
+                        "filename": file_info["filename"]
+                    })
+                    
+                    tasks_dict[task_id] = {
+                        "progress": 0,
+                        "status": "pending",
+                        "result": None,
+                        "server_name": server_name,
+                        "server_ip": server_ip,
+                        "filename": file_info["filename"]
+                    }
+            
+            # 初始化multiprocessing.Manager（延迟初始化）
+            manager, shared_dict, shared_lock = get_batch_upload_manager()
+            
+            # 存储批量任务信息（使用Manager的dict）
+            with shared_lock:
+                shared_dict[batch_id] = manager.dict({
+                    "tasks": manager.dict(tasks_dict),
+                    "temp_files": temp_files,
+                    "file_info_list": file_info_list,
+                    "target_dir": target_dir,
+                    "port": port,
+                    "cancelled": False
+                })
+                # 将tasks_dict中的每个任务也转换为Manager.dict
+                for tid, task_data in tasks_dict.items():
+                    shared_dict[batch_id]["tasks"][tid] = manager.dict(task_data)
+            
+            # 启动所有上传任务（使用进程）
+            processes = []
+            for task_info in task_list:
+                task_id = task_info["task_id"]
+                server_name = task_info["server_name"]
+                server_ip = task_info["server_ip"]
+                filename = task_info["filename"]
+                
+                # 找到对应的文件信息
+                file_info = next((f for f in file_info_list if f["filename"] == filename), None)
+                if not file_info:
+                    continue
+                
+                # 使用进程启动上传任务
+                p = multiprocessing.Process(
+                    target=do_batch_upload_process,
+                    args=(task_id, server_name, server_ip, filename, file_info, target_dir, port, batch_id, shared_dict, shared_lock),
+                    daemon=False
+                )
+                p.start()
+                processes.append(p)
+            
+            # 不等待进程完成，让它们独立运行
+            # 进程会在完成后自动退出
+            
+            return jsonify({
+                "ok": True,
+                "batch_id": batch_id,
+                "tasks": task_list
+            })
+        except Exception as e:
+            # 清理临时文件
+            for temp_path in temp_files:
+                try:
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+                except:
+                    pass
+            raise
+    except Exception as e:
+        log_srv(f"batch upload exception: {e}")
+        return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
+
+
+@app.route("/api/batch-upload/progress/<batch_id>")
+def api_batch_upload_progress(batch_id):
+    """SSE 推送批量上传进度"""
+    def generate():
+        last_tasks_state = None
+        # 获取共享字典和锁
+        manager, shared_dict, shared_lock = get_batch_upload_manager()
+        
+        while True:
+            with shared_lock:
+                batch_task = shared_dict.get(batch_id)
+            
+            if not batch_task:
+                yield f"data: {json.dumps({'error': '批量上传任务不存在'})}\n\n"
+                break
+            
+            # 检查是否已取消（Manager.dict需要特殊处理）
+            cancelled = batch_task.get("cancelled", False) if isinstance(batch_task, dict) else False
+            if cancelled:
+                yield f"data: {json.dumps({'error': '批量上传任务已取消'})}\n\n"
+                break
+            
+            # 获取任务字典（Manager.dict需要转换为普通dict以便序列化）
+            tasks = batch_task.get("tasks", {})
+            if isinstance(tasks, type(shared_dict)):  # 如果是Manager.dict，需要转换为普通dict
+                tasks = dict(tasks)
+            current_tasks_state = {}
+            all_done = True
+            has_error = False
+            success_count = 0
+            error_count = 0
+            total_count = len(tasks)
+            
+            # 汇总错误信息
+            error_summary = []
+            
+            for task_id, task_info in tasks.items():
+                # 如果task_info是Manager.dict，需要转换为普通dict
+                if isinstance(task_info, type(shared_dict)):
+                    task_info = dict(task_info)
+                
+                status = task_info.get("status", "pending")
+                result = task_info.get("result")
+                
+                current_tasks_state[task_id] = {
+                    "progress": task_info.get("progress", 0),
+                    "status": status,
+                    "result": result,
+                    "server_name": task_info.get("server_name", ""),
+                    "server_ip": task_info.get("server_ip", ""),
+                    "filename": task_info.get("filename", "")
+                }
+                
+                if status not in ("done", "error"):
+                    all_done = False
+                elif status == "error":
+                    has_error = True
+                    error_count += 1
+                    if result and result.get("error"):
+                        error_summary.append({
+                            "server": f"{task_info.get('server_name', '')} ({task_info.get('server_ip', '')})",
+                            "filename": task_info.get("filename", ""),
+                            "error": result.get("error")
+                        })
+                elif status == "done":
+                    success_count += 1
+            
+            # 强制每次循环都发送更新，确保前端能及时收到进度变化
+            # 这是最激进的方案：移除所有条件判断，每次循环都发送
+            import time as time_module
+            import copy
+            current_time = time_module.time()
+            
+            # 检查是否有实际变化（用于标记心跳）
+            is_heartbeat = False
+            if last_tasks_state is not None:
+                # 简单比较：如果状态完全相同，则标记为心跳
+                state_changed = False
+                if len(current_tasks_state) != len(last_tasks_state):
+                    state_changed = True
+                else:
+                    for task_id in current_tasks_state:
+                        if task_id not in last_tasks_state:
+                            state_changed = True
+                            break
+                        current_task = current_tasks_state[task_id]
+                        last_task = last_tasks_state[task_id]
+                        if (current_task.get("progress", 0) != last_task.get("progress", 0) or
+                            current_task.get("status", "pending") != last_task.get("status", "pending")):
+                            state_changed = True
+                            break
+                is_heartbeat = not state_changed
+            
+            # 强制发送：每次循环都发送更新，不管是否有变化
+            # 这样可以确保multiprocessing.Manager.dict的更新能及时传递到前端
+            summary = {
+                "tasks": current_tasks_state,
+                "all_done": all_done,
+                "has_error": has_error,
+                "success_count": success_count,
+                "error_count": error_count,
+                "total_count": total_count,
+                "heartbeat": is_heartbeat  # 标记是否为心跳更新
+            }
+            if error_summary:
+                summary["error_summary"] = error_summary
+            yield f"data: {json.dumps(summary)}\n\n"
+            # 深拷贝保存状态，避免引用问题
+            last_tasks_state = copy.deepcopy(current_tasks_state)
+            if not hasattr(generate, '_last_send_time'):
+                generate._last_send_time = current_time
+            generate._last_send_time = current_time
+            
+            if all_done:
+                
+                # **关键改进：发送多次完成确认，确保前端收到**
+                # 方案1：发送明确的完成事件类型
+                final_summary = {
+                    "tasks": current_tasks_state,
+                    "all_done": True,
+                    "has_error": has_error,
+                    "success_count": success_count,
+                    "error_count": error_count,
+                    "total_count": total_count,
+                    "status": "completed",  # 明确的完成状态
+                    "message": "所有文件上传完成",
+                    "final": True  # 标记为最终消息
+                }
+                if error_summary:
+                    final_summary["error_summary"] = error_summary
+                
+                # 发送3次完成确认，确保消息送达
+                for i in range(3):
+                    # 使用明确的event类型
+                    yield f"event: complete\ndata: {json.dumps(final_summary)}\n\n"
+                    # 同时发送普通消息（兼容性）
+                    yield f"data: {json.dumps(final_summary)}\n\n"
+                    if i < 2:  # 最后一次不需要延迟
+                        time.sleep(0.05)  # 小延迟确保顺序
+                
+                # 清理临时文件
+                temp_files = batch_task.get("temp_files", [])
+                if isinstance(temp_files, list):
+                    for temp_path in temp_files:
+                        try:
+                            if os.path.exists(temp_path):
+                                os.unlink(temp_path)
+                        except:
+                            pass
+                break
+            
+            # 使用极短的检查间隔（0.1秒），确保能及时检测到multiprocessing.Manager.dict的更新
+            # 这样可以最大程度减少进程间通信延迟对前端显示的影响
+            time.sleep(0.1)
+    
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+
+@app.route("/api/batch-upload/status/<batch_id>")
+def api_batch_upload_status(batch_id):
+    """查询批量上传任务状态（用于前端主动查询）"""
+    try:
+        manager, shared_dict, shared_lock = get_batch_upload_manager()
+        with shared_lock:
+            batch_task = shared_dict.get(batch_id)
+        
+        if not batch_task:
+            return jsonify({"error": "批量上传任务不存在"}), 404
+        
+        # 检查是否已取消
+        cancelled = batch_task.get("cancelled", False) if isinstance(batch_task, dict) else False
+        if cancelled:
+            return jsonify({
+                "batch_id": batch_id,
+                "status": "cancelled",
+                "message": "批量上传任务已取消"
+            })
+        
+        # 获取任务字典
+        tasks = batch_task.get("tasks", {})
+        if isinstance(tasks, type(shared_dict)):
+            tasks = dict(tasks)
+        
+        all_done = True
+        has_error = False
+        success_count = 0
+        error_count = 0
+        total_count = len(tasks)
+        tasks_info = {}
+        
+        for task_id, task_info in tasks.items():
+            if isinstance(task_info, type(shared_dict)):
+                task_info = dict(task_info)
+            
+            status = task_info.get("status", "pending")
+            result = task_info.get("result")
+            
+            tasks_info[task_id] = {
+                "progress": task_info.get("progress", 0),
+                "status": status,
+                "result": result,
+                "server_name": task_info.get("server_name", ""),
+                "server_ip": task_info.get("server_ip", ""),
+                "filename": task_info.get("filename", "")
+            }
+            
+            if status not in ("done", "error"):
+                all_done = False
+            elif status == "error":
+                has_error = True
+                error_count += 1
+            elif status == "done":
+                success_count += 1
+        
+        return jsonify({
+            "batch_id": batch_id,
+            "status": "completed" if all_done else "running",
+            "all_done": all_done,
+            "has_error": has_error,
+            "success_count": success_count,
+            "error_count": error_count,
+            "total_count": total_count,
+            "tasks": tasks_info
+        })
+    except Exception as e:
+        log_srv(f"查询批量上传状态异常: {e}")
+        return jsonify({"error": f"服务器异常: {e}"}), 500
+
+
+@app.route("/api/batch-upload/cancel/<batch_id>", methods=["POST"])
+def api_batch_upload_cancel(batch_id):
+    """取消批量上传任务"""
+    try:
+        manager, shared_dict, shared_lock = get_batch_upload_manager()
+        with shared_lock:
+            batch_task = shared_dict.get(batch_id)
+            
+            if not batch_task:
+                return jsonify({"ok": False, "error": "批量上传任务不存在"}), 404
+            
+            if batch_task.get("cancelled", False):
+                return jsonify({"ok": False, "error": "任务已取消"}), 400
+            
+            # 设置取消标志
+            batch_task["cancelled"] = True
+            
+            # 清理临时文件
+            temp_files = batch_task.get("temp_files", [])
+            for temp_path in temp_files:
+                try:
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+                except:
+                    pass
+            
+            return jsonify({"ok": True, "message": "批量上传任务已取消"})
+    except Exception as e:
+        log_srv(f"取消批量上传异常: {e}")
+        return jsonify({"ok": False, "error": f"服务器异常: {e}"}), 500
+
+
 @app.route("/api/upload/progress/<task_id>")
 def api_upload_progress(task_id):
     """SSE 推送上传进度"""
     def generate():
         last_progress = -1
+        import time as time_module
+        last_send_time = time_module.time()
+        
         while True:
             with upload_tasks_lock:
                 task = upload_tasks.get(task_id)
@@ -566,11 +1161,26 @@ def api_upload_progress(task_id):
                 break
             
             current_progress = task["progress"]
-            if current_progress != last_progress:
-                yield f"data: {json.dumps({'progress': current_progress, 'status': task['status'], 'result': task['result']})}\n\n"
-                last_progress = current_progress
+            current_status = task["status"]
+            current_time = time_module.time()
+            should_send = False
             
-            if task["status"] in ("done", "error"):
+            # 进度变化时发送
+            if current_progress != last_progress:
+                should_send = True
+            # 状态变化时发送
+            elif current_status != "uploading":
+                should_send = True
+            # 保持SSE连接活跃，每0.5秒发送一次心跳（即使没有变化）
+            elif current_time - last_send_time >= 0.5:
+                should_send = True
+            
+            if should_send:
+                yield f"data: {json.dumps({'progress': current_progress, 'status': current_status, 'result': task.get('result')})}\n\n"
+                last_progress = current_progress
+                last_send_time = current_time
+            
+            if current_status in ("done", "error"):
                 break
             
             time.sleep(0.2)
@@ -581,6 +1191,8 @@ def api_upload_progress(task_id):
 @app.route("/api/download/stream")
 def api_download_stream():
     """流式下载文件或文件夹到浏览器（直接另存为）"""
+    import logging
+    log_file = os.path.join(os.path.dirname(__file__), '.cursor', 'debug.log')
     try:
         server_name = request.args.get("server_name", "").strip()
         server_ip = request.args.get("server_ip", "").strip()
@@ -640,21 +1252,36 @@ def api_download_stream():
                             add_directory_recursive(sftp, remote_path)
                         
                         zip_buffer.seek(0)
+                        chunk_count = 0
                         while True:
                             chunk = zip_buffer.read(8192)  # 8KB chunks
                             if not chunk:
                                 break
+                            chunk_count += 1
+                            if chunk_count % 100 == 0:  # 每100个chunk记录一次（保留用于性能监控）
+                                pass
                             yield chunk
                     finally:
                         sftp.close()
                         transport.close()
                 
                 zip_filename = f"{filename}.zip"
+                # 编码文件名以支持中文字符（RFC 5987）
+                import urllib.parse
+                # filename参数：如果包含非ASCII字符，使用URL编码的ASCII版本
+                safe_filename = zip_filename.encode('ascii', 'ignore').decode('ascii') or 'download.zip'
+                if safe_filename != zip_filename:
+                    # 如果文件名包含非ASCII字符，使用URL编码
+                    safe_filename = urllib.parse.quote(zip_filename)
+                # filename*参数：使用UTF-8编码（RFC 5987标准）
+                encoded_filename = urllib.parse.quote(zip_filename.encode('utf-8'))
+                # 使用filename*参数支持UTF-8编码，同时保留filename作为fallback
+                content_disposition = f'attachment; filename="{safe_filename}"; filename*=UTF-8\'\'{encoded_filename}'
                 return Response(
                     generate_zip(),
                     mimetype='application/zip',
                     headers={
-                        'Content-Disposition': f'attachment; filename="{zip_filename}"',
+                        'Content-Disposition': content_disposition,
                         'Content-Type': 'application/zip'
                     }
                 )
@@ -673,11 +1300,22 @@ def api_download_stream():
                         sftp.close()
                         transport.close()
                 
+                # 编码文件名以支持中文字符（RFC 5987）
+                import urllib.parse
+                # filename参数：如果包含非ASCII字符，使用URL编码的ASCII版本
+                safe_filename = filename.encode('ascii', 'ignore').decode('ascii') or 'download'
+                if safe_filename != filename:
+                    # 如果文件名包含非ASCII字符，使用URL编码
+                    safe_filename = urllib.parse.quote(filename)
+                # filename*参数：使用UTF-8编码（RFC 5987标准）
+                encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
+                # 使用filename*参数支持UTF-8编码，同时保留filename作为fallback
+                content_disposition = f'attachment; filename="{safe_filename}"; filename*=UTF-8\'\'{encoded_filename}'
                 return Response(
                     generate_file(),
                     mimetype='application/octet-stream',
                     headers={
-                        'Content-Disposition': f'attachment; filename="{filename}"',
+                        'Content-Disposition': content_disposition,
                         'Content-Type': 'application/octet-stream'
                     }
                 )
@@ -1149,6 +1787,10 @@ def api_fota_progress(task_id):
     """SSE 推送FOTA进度"""
     def generate():
         last_progress = -1
+        last_status = None
+        import time as time_module
+        last_send_time = time_module.time()
+        
         while True:
             with fota_tasks_lock:
                 task = fota_tasks.get(task_id)
@@ -1158,11 +1800,27 @@ def api_fota_progress(task_id):
                 break
             
             current_progress = task["progress"]
-            if current_progress != last_progress or task["status"] != "uploading":
-                yield f"data: {json.dumps({'progress': current_progress, 'status': task['status'], 'step': task['step'], 'result': task['result']})}\n\n"
-                last_progress = current_progress
+            current_status = task["status"]
+            current_time = time_module.time()
+            should_send = False
             
-            if task["status"] in ("done", "error"):
+            # 进度变化时发送
+            if current_progress != last_progress:
+                should_send = True
+            # 状态变化时发送
+            elif current_status != last_status:
+                should_send = True
+            # 保持SSE连接活跃，每0.5秒发送一次心跳（即使没有变化）
+            elif current_time - last_send_time >= 0.5:
+                should_send = True
+            
+            if should_send:
+                yield f"data: {json.dumps({'progress': current_progress, 'status': current_status, 'step': task.get('step', ''), 'result': task.get('result')})}\n\n"
+                last_progress = current_progress
+                last_status = current_status
+                last_send_time = current_time
+            
+            if current_status in ("done", "error"):
                 break
             
             time.sleep(0.2)
@@ -1918,6 +2576,7 @@ def index():
     <div class="card">
       <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
         <button class="btn" onclick="openBatchFota()" style="background: #3b82f6; color: #fff; border: none;">批量FOTA操作</button>
+        <button class="btn" onclick="openBatchUpload()" style="background: #10b981; color: #fff; border: none; margin-left: 8px;">批量上传</button>
         <span id="selectedCount" style="color: var(--muted); font-size: 13px;">已选择: 0</span>
       </div>
       <div id="errorBox" class="error"></div>
@@ -2026,6 +2685,31 @@ def index():
     </div>
   </div>
 
+  <div class="modal-backdrop" id="batchUploadModal">
+    <div class="modal" style="width: 500px;">
+      <h3>批量上传文件</h3>
+      <div style="margin-bottom: 8px; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 4px;">已选择服务器 (<span id="batchUploadServerCount">0</span>):</div>
+        <div id="batchUploadServerList" style="font-size: 12px; color: var(--text);"></div>
+      </div>
+      <label>目标目录</label>
+      <input type="text" id="batchUploadTargetDir" placeholder="例如 /tmp">
+      <label style="margin-top:8px;">选择文件（可多选）</label>
+      <input type="file" id="batchUploadFiles" multiple>
+      <div class="progress" id="batchUploadProgress"></div>
+      <div style="margin-top: 12px; max-height: 300px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 4px;">任务进度:</div>
+        <div id="batchUploadTasks" style="font-size: 12px;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeBatchUpload()">关闭</button>
+        <button class="btn" id="batchUploadCancelBtn" onclick="cancelBatchUpload()" style="background: #ef4444; color: #fff; border: none; display: none;">终止</button>
+        <button class="btn" id="batchUploadStart22Btn" onclick="startBatchUpload(22)" style="background: #3b82f6; color: #fff; border: none;">22端口上传</button>
+        <button class="btn" id="batchUploadStart9999Btn" onclick="startBatchUpload(9999)" style="background: #3b82f6; color: #fff; border: none;">9999端口上传</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     function tag(text, cls) {
       return '<span class="tag ' + cls + '">' + text + '</span>';
@@ -2079,6 +2763,11 @@ def index():
     const remotePathInput = document.getElementById('remotePath');
     const downloadProgressBox = document.getElementById('downloadProgress');
     let currentDownload = { name: "", ip: "", port: 22 };
+    
+    // Global error handler
+    window.addEventListener('error', function(e) {
+      // 静默处理错误
+    });
 
     function openDownload(name, ip, port) {
       currentDownload = { name, ip, port };
@@ -2094,6 +2783,7 @@ def index():
     }
 
     function downloadFile() {
+      try {
       const remotePath = remotePathInput.value.trim();
       
       if (!remotePath) {
@@ -2106,38 +2796,145 @@ def index():
       // 构建流式下载URL
       const downloadUrl = `/api/download/stream?server_name=${encodeURIComponent(currentDownload.name)}&server_ip=${encodeURIComponent(currentDownload.ip)}&port=${currentDownload.port}&remote_path=${encodeURIComponent(remotePath)}`;
       
-      // 使用window.open强制弹出"另存为"对话框
-      downloadProgressBox.textContent = '正在下载，请在弹出的对话框中选择保存位置...';
+      // 先使用HEAD请求检查API是否可用，避免直接打开窗口显示错误
+      downloadProgressBox.textContent = '正在检查下载链接...';
       
-      // 尝试使用window.open打开下载URL，这可能会触发"另存为"对话框
-      const downloadWindow = window.open(downloadUrl, '_blank');
+      // 创建超时控制器
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      // 如果window.open被阻止，回退到使用<a>标签
-      if (!downloadWindow) {
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = '';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-        }, 100);
-      } else {
-        // 关闭新窗口（如果浏览器没有自动关闭）
-        setTimeout(() => {
-          try {
-            downloadWindow.close();
-          } catch(e) {
-            // 忽略错误
+      fetch(downloadUrl, { method: 'HEAD', signal: controller.signal })
+        .then(response => {
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            // 如果是错误响应，尝试读取JSON错误信息
+            return response.text().then(text => {
+              try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.error || `下载失败: HTTP ${response.status}`);
+              } catch(e) {
+                if (e instanceof Error && e.message.includes('下载失败')) {
+                  throw e;
+                }
+                throw new Error(`下载失败: HTTP ${response.status} ${response.statusText}`);
+              }
+            });
           }
-        }, 1000);
-      }
+          
+          // 检查Content-Type，如果是JSON，说明是错误响应
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return response.text().then(text => {
+              try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.error || '下载失败: 服务器返回错误');
+              } catch(e) {
+                if (e instanceof Error && e.message.includes('下载失败')) {
+                  throw e;
+                }
+                throw new Error('下载失败: 服务器返回错误');
+              }
+            });
+          }
+          
+          // 成功，使用window.open或<a>标签触发下载
+          downloadProgressBox.textContent = '正在准备下载，请稍候...';
+          
+          // 显示等待提示
+          let waitTime = 0;
+          const progressInterval = setInterval(() => {
+            waitTime += 1;
+            if (waitTime <= 5) {
+              downloadProgressBox.textContent = `正在准备下载，请稍候... (${waitTime}秒)`;
+            } else if (waitTime <= 30) {
+              downloadProgressBox.textContent = `正在生成下载文件，请稍候... (${waitTime}秒)`;
+            } else {
+              downloadProgressBox.textContent = `正在生成下载文件，可能需要较长时间，请耐心等待... (${waitTime}秒)`;
+            }
+          }, 1000);
+          
+          // 尝试使用window.open打开下载URL
+          const downloadWindow = window.open(downloadUrl, '_blank');
+          
+          // 如果window.open被阻止，回退到使用<a>标签
+          if (!downloadWindow) {
+            clearInterval(progressInterval);
+            downloadProgressBox.textContent = '正在下载，请在弹出的对话框中选择保存位置...';
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = '';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+              document.body.removeChild(link);
+              downloadProgressBox.textContent = '下载已开始！如果下载未开始，请检查浏览器下载设置。';
+            }, 100);
+          } else {
+            
+            // 监控下载窗口状态
+            let checkCount = 0;
+            const checkInterval = setInterval(() => {
+              checkCount++;
+              try {
+                // 检查窗口是否已关闭
+                if (downloadWindow.closed) {
+                  clearInterval(progressInterval);
+                  clearInterval(checkInterval);
+                  downloadProgressBox.textContent = '下载窗口已关闭。如果下载未完成，请检查浏览器下载设置或重试。';
+                  setTimeout(() => {
+                    closeDownload();
+                  }, 3000);
+                  return;
+                }
+                
+                // 每5秒更新一次提示
+                if (checkCount % 5 === 0) {
+                  downloadProgressBox.textContent = `正在生成下载文件，请保持窗口打开... (${waitTime}秒)`;
+                }
+                
+                // 如果超过60秒，提示用户可能需要更长时间
+                if (waitTime > 60) {
+                  downloadProgressBox.textContent = `文件较大，生成时间可能较长，请继续等待... (${waitTime}秒)`;
+                }
+              } catch(e) {
+                // 窗口可能已关闭或无法访问
+                clearInterval(progressInterval);
+                clearInterval(checkInterval);
+                downloadProgressBox.textContent = '下载窗口已关闭。如果下载未完成，请检查浏览器下载设置或重试。';
+                setTimeout(() => {
+                  closeDownload();
+                }, 3000);
+              }
+            }, 1000);
+            
+            // 设置最大等待时间（5分钟）
+            setTimeout(() => {
+              clearInterval(progressInterval);
+              clearInterval(checkInterval);
+              try {
+                if (!downloadWindow.closed) {
+                  downloadProgressBox.textContent = '下载时间较长，窗口将保持打开。如果下载未开始，请检查浏览器下载设置。';
+                  // 不自动关闭窗口，让用户手动关闭
+                }
+              } catch(e) {
+                // 忽略错误
+              }
+            }, 300000); // 5分钟
+          }
+        })
+        .catch(error => {
+          clearTimeout(timeoutId);
+          const errorMsg = error.name === 'AbortError' ? '下载超时，请检查网络连接或文件大小' : error.message;
+          downloadProgressBox.textContent = `下载失败: ${errorMsg}`;
+          alert(`下载失败: ${errorMsg}`);
+        });
       
-      downloadProgressBox.textContent = '下载已开始！';
-      setTimeout(() => {
-        closeDownload();
-      }, 1000);
+      // 注意：下载进度提示已在fetch的then/catch中处理，这里不需要立即关闭窗口
+      } catch(e) {
+        alert('下载失败: ' + e.message);
+      }
     }
 
     function openUpload(name, ip, port) {
@@ -2207,10 +3004,19 @@ def index():
           } else if (msg.status === 'done') {
             es.close();
             if (msg.result && msg.result.ok) {
-              progressBox.textContent = `上传成功: ${msg.result.path}`;
+              let doneText = `上传成功: ${msg.result.path || '成功'}`;
+              if (msg.result.exists) {
+                doneText += ' (文件已存在，已覆盖)';
+              }
+              progressBox.textContent = doneText;
+              progressBox.style.color = '#166534';
             } else {
               progressBox.textContent = `失败: ${msg.result?.error || '未知错误'}`;
+              progressBox.style.color = '#991b1b';
             }
+            setTimeout(() => {
+              closeUpload();
+            }, 1500);
           } else if (msg.status === 'error') {
             es.close();
             progressBox.textContent = `失败: ${msg.result?.error || '未知错误'}`;
@@ -2458,6 +3264,413 @@ def index():
 
     let currentBatchId = null;
     let batchProgressInterval = null;
+    let currentBatchUploadId = null;
+    let batchUploadProgressInterval = null;
+
+    function openBatchUpload() {
+      const count = Object.keys(selectedServers).length;
+      if (count === 0) {
+        alert('请先选择至少一个服务器');
+        return;
+      }
+      const batchUploadBackdrop = document.getElementById('batchUploadModal');
+      const batchUploadServerList = document.getElementById('batchUploadServerList');
+      const batchUploadServerCount = document.getElementById('batchUploadServerCount');
+      const batchUploadTargetDir = document.getElementById('batchUploadTargetDir');
+      const batchUploadFiles = document.getElementById('batchUploadFiles');
+      const batchUploadProgress = document.getElementById('batchUploadProgress');
+      const batchUploadTasks = document.getElementById('batchUploadTasks');
+      const batchUploadStart22Btn = document.getElementById('batchUploadStart22Btn');
+      const batchUploadStart9999Btn = document.getElementById('batchUploadStart9999Btn');
+      const batchUploadCancelBtn = document.getElementById('batchUploadCancelBtn');
+
+      // 重置状态
+      currentBatchUploadId = null;
+      if (batchUploadProgressInterval) {
+        clearInterval(batchUploadProgressInterval);
+        batchUploadProgressInterval = null;
+      }
+
+      batchUploadServerCount.textContent = count;
+      batchUploadTargetDir.value = defaultTarget || '';
+      batchUploadFiles.value = '';
+      batchUploadProgress.textContent = '';
+      batchUploadTasks.innerHTML = '';
+      batchUploadStart22Btn.style.display = 'inline-block';
+      batchUploadStart9999Btn.style.display = 'inline-block';
+      batchUploadCancelBtn.style.display = 'none';
+
+      let serverListHtml = '';
+      for (const key in selectedServers) {
+        const srv = selectedServers[key];
+        serverListHtml += `<div>${srv.name} (${srv.ip})</div>`;
+      }
+      batchUploadServerList.innerHTML = serverListHtml;
+
+      batchUploadBackdrop.style.display = 'flex';
+    }
+
+    function closeBatchUpload() {
+      // 如果正在执行，先取消
+      if (currentBatchUploadId) {
+        cancelBatchUpload();
+      }
+      document.getElementById('batchUploadModal').style.display = 'none';
+    }
+
+    function cancelBatchUpload() {
+      if (!currentBatchUploadId) {
+        return;
+      }
+
+      const batchUploadCancelBtn = document.getElementById('batchUploadCancelBtn');
+      const batchUploadProgress = document.getElementById('batchUploadProgress');
+      
+      batchUploadCancelBtn.disabled = true;
+      batchUploadProgress.textContent = '正在终止任务...';
+
+      fetch(`/api/batch-upload/cancel/${currentBatchUploadId}`, {
+        method: 'POST'
+      }).then(res => res.json()).then(data => {
+        if (data.ok) {
+          batchUploadProgress.textContent = '任务已终止: ' + (data.message || '');
+          currentBatchUploadId = null;
+          batchUploadCancelBtn.style.display = 'none';
+          document.getElementById('batchUploadStart22Btn').style.display = 'inline-block';
+          document.getElementById('batchUploadStart9999Btn').style.display = 'inline-block';
+        } else {
+          batchUploadProgress.textContent = '终止失败: ' + (data.error || '未知错误');
+          batchUploadCancelBtn.disabled = false;
+        }
+      }).catch(err => {
+        batchUploadProgress.textContent = '终止失败: ' + err;
+        batchUploadCancelBtn.disabled = false;
+      });
+    }
+
+    function startBatchUpload(port) {
+      const files = document.getElementById('batchUploadFiles').files;
+      if (!files || files.length === 0) {
+        alert('请先选择至少一个文件');
+        return;
+      }
+
+      const targetDir = document.getElementById('batchUploadTargetDir').value.trim();
+      if (!targetDir) {
+        alert('请填写目标目录');
+        return;
+      }
+
+      const servers = [];
+      for (const key in selectedServers) {
+        servers.push(selectedServers[key]);
+      }
+
+      const fd = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        fd.append('files', files[i]);
+      }
+      fd.append('port', port);
+      fd.append('servers', JSON.stringify(servers));
+      fd.append('target_dir', targetDir);
+
+      const batchUploadProgress = document.getElementById('batchUploadProgress');
+      const batchUploadTasks = document.getElementById('batchUploadTasks');
+      const batchUploadStart22Btn = document.getElementById('batchUploadStart22Btn');
+      const batchUploadStart9999Btn = document.getElementById('batchUploadStart9999Btn');
+      const batchUploadCancelBtn = document.getElementById('batchUploadCancelBtn');
+
+      batchUploadProgress.textContent = `开始批量上传 (${port}端口)...`;
+      batchUploadTasks.innerHTML = '';
+      batchUploadStart22Btn.style.display = 'none';
+      batchUploadStart9999Btn.style.display = 'none';
+      batchUploadCancelBtn.style.display = 'inline-block';
+      batchUploadCancelBtn.disabled = false;
+
+      fetch('/api/batch-upload', {
+        method: 'POST',
+        body: fd
+      }).then(res => res.json()).then(data => {
+        if (!data.ok || !data.batch_id) {
+          batchUploadProgress.textContent = `失败: ${data.error || '未知错误'}`;
+          batchUploadStart22Btn.style.display = 'inline-block';
+          batchUploadStart9999Btn.style.display = 'inline-block';
+          return;
+        }
+
+        const batchId = data.batch_id;
+        currentBatchUploadId = batchId;
+        batchUploadProgress.textContent = `批量任务已启动，任务ID: ${batchId}`;
+
+        // 初始化任务列表显示
+        const taskMap = {};
+        data.tasks.forEach(taskInfo => {
+          const taskKey = `${taskInfo.server_name}:${taskInfo.server_ip}:${taskInfo.filename}`;
+          const taskId = `upload-task-${taskKey.replace(/[:.]/g, '-')}`;
+          taskMap[taskInfo.task_id] = taskId;
+          
+          const taskContainer = document.createElement('div');
+          taskContainer.id = taskId;
+          taskContainer.style.marginBottom = '8px';
+          taskContainer.style.padding = '6px';
+          taskContainer.style.border = '1px solid var(--border)';
+          taskContainer.style.borderRadius = '4px';
+          taskContainer.style.backgroundColor = '#f8fafc';
+          
+          const taskHeader = document.createElement('div');
+          taskHeader.style.fontWeight = '600';
+          taskHeader.style.fontSize = '11px';
+          taskHeader.textContent = `${taskInfo.server_name} (${taskInfo.server_ip}) - ${taskInfo.filename}`;
+          
+          const taskProgress = document.createElement('div');
+          taskProgress.id = `${taskId}-progress`;
+          taskProgress.className = 'progress';
+          taskProgress.style.fontSize = '11px';
+          taskProgress.style.marginTop = '4px';
+          taskProgress.textContent = '等待开始...';
+          
+          taskContainer.appendChild(taskHeader);
+          taskContainer.appendChild(taskProgress);
+          batchUploadTasks.appendChild(taskContainer);
+        });
+
+        // 使用EventSource监听进度
+        const es = new EventSource(`/api/batch-upload/progress/${batchId}`);
+        
+        // **双重确认机制：监听明确的完成事件**
+        let completionConfirmed = false;
+        let completionCheckTimer = null;
+        let lastProgressUpdate = Date.now();
+        
+        // 监听明确的complete事件类型
+        es.addEventListener('complete', (e) => {
+          const progressData = JSON.parse(e.data);
+          console.log('收到完成事件:', progressData);
+          handleCompletion(progressData);
+        });
+        
+        // 处理完成逻辑
+        function handleCompletion(progressData) {
+          if (completionConfirmed) return; // 避免重复处理
+          completionConfirmed = true;
+          
+          // 清除超时检查
+          if (completionCheckTimer) {
+            clearInterval(completionCheckTimer);
+            completionCheckTimer = null;
+          }
+          
+          es.close();
+          let progressText = progressData.has_error ? 
+            `批量上传完成（成功: ${progressData.success_count || 0}, 失败: ${progressData.error_count || 0}）` : 
+            `批量上传完成（成功: ${progressData.success_count || 0}）`;
+          
+          // 显示错误汇总
+          if (progressData.error_summary && progressData.error_summary.length > 0) {
+            progressText += `\n失败详情: ${progressData.error_summary.map(e => `${e.server}/${e.filename}: ${e.error}`).join('; ')}`;
+          }
+          
+          batchUploadProgress.textContent = progressText;
+          batchUploadStart22Btn.style.display = 'inline-block';
+          batchUploadStart9999Btn.style.display = 'inline-block';
+          batchUploadCancelBtn.style.display = 'none';
+          currentBatchUploadId = null;
+        }
+        
+        // **超时检查机制：如果进度接近100%但没收到完成事件，主动查询**
+        completionCheckTimer = setInterval(() => {
+          const timeSinceLastUpdate = Date.now() - lastProgressUpdate;
+          
+          // 如果超过3秒没收到更新，且进度接近100%，主动查询状态
+          if (timeSinceLastUpdate > 3000 && !completionConfirmed) {
+            checkUploadCompletion();
+          }
+        }, 2000); // 每2秒检查一次
+        
+        // 主动查询上传完成状态（使用状态查询API）
+        async function checkUploadCompletion() {
+          try {
+            const response = await fetch(`/api/batch-upload/status/${batchId}`);
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            if (data.all_done || data.status === 'completed') {
+              // 转换为与SSE消息相同的格式
+              const progressData = {
+                all_done: data.all_done,
+                has_error: data.has_error,
+                success_count: data.success_count,
+                error_count: data.error_count,
+                total_count: data.total_count,
+                tasks: data.tasks,
+                status: data.status,
+                final: true
+              };
+              handleCompletion(progressData);
+            }
+          } catch (error) {
+            console.error('状态检查失败:', error);
+          }
+        }
+        
+        es.onmessage = (e) => {
+          lastProgressUpdate = Date.now(); // 更新最后收到消息的时间
+          const progressData = JSON.parse(e.data);
+          
+          if (progressData.error) {
+            batchUploadProgress.textContent = `错误: ${progressData.error}`;
+            es.close();
+            return;
+          }
+
+          // **双重确认：检查all_done或status === 'completed'**
+          if (progressData.all_done || progressData.status === 'completed' || progressData.final) {
+            handleCompletion(progressData);
+            return;
+          }
+
+          // 更新各个任务的进度
+          if (progressData.tasks) {
+            let totalProgress = 0;
+            let totalTasks = 0;
+            let uploadingCount = 0;
+            let doneCount = 0;
+            let pendingCount = 0;
+            
+            for (const taskId in progressData.tasks) {
+              const taskInfo = progressData.tasks[taskId];
+              const displayTaskId = taskMap[taskId];
+              if (displayTaskId) {
+                const taskProgressDiv = document.getElementById(`${displayTaskId}-progress`);
+                if (taskProgressDiv) {
+                  const percent = taskInfo.progress || 0;
+                  const status = taskInfo.status || 'pending';
+                  const result = taskInfo.result;
+                  
+                  // **关键修复：特殊处理100%进度的情况**
+                  // 如果进度是100%，无论状态是什么，都应该检查是否有result字段
+                  // 这是因为multiprocessing.Manager.dict的状态更新可能有延迟
+                  if (percent === 100) {
+                    // 进度100%时，优先检查result字段
+                    if (result) {
+                      // 有result字段，说明任务已完成
+                      if (result.ok) {
+                        let doneText = `完成: ${result.path || '成功'}`;
+                        if (result.exists) {
+                          doneText += ' (文件已存在，已覆盖)';
+                        }
+                        taskProgressDiv.textContent = doneText;
+                        taskProgressDiv.style.color = '#166534';
+                        doneCount++;
+                      } else {
+                        taskProgressDiv.textContent = `失败: ${result.error || '未知错误'}`;
+                        taskProgressDiv.style.color = '#991b1b';
+                      }
+                    } else {
+                      // 进度100%但没有result，可能是状态更新延迟
+                      // 显示"上传完成，等待确认..."，并触发一次状态查询
+                      taskProgressDiv.textContent = `上传完成，等待确认...`;
+                      taskProgressDiv.style.color = '#f59e0b';
+                      uploadingCount++;
+                      // **关键：如果进度100%但没有result，延迟1秒后主动查询一次该任务的状态**
+                      setTimeout(async () => {
+                        try {
+                          const statusResponse = await fetch(`/api/batch-upload/status/${batchId}`);
+                          if (statusResponse.ok) {
+                            const statusData = await statusResponse.json();
+                            const taskStatus = statusData.tasks && statusData.tasks[taskId];
+                            if (taskStatus && taskStatus.result) {
+                              // 如果查询到result，立即更新显示
+                              const result = taskStatus.result;
+                              if (result.ok) {
+                                let doneText = `完成: ${result.path || '成功'}`;
+                                if (result.exists) {
+                                  doneText += ' (文件已存在，已覆盖)';
+                                }
+                                taskProgressDiv.textContent = doneText;
+                                taskProgressDiv.style.color = '#166534';
+                              } else {
+                                taskProgressDiv.textContent = `失败: ${result.error || '未知错误'}`;
+                                taskProgressDiv.style.color = '#991b1b';
+                              }
+                            }
+                          }
+                        } catch (err) {
+                          console.error('查询任务状态失败:', err);
+                        }
+                      }, 1000); // 延迟1秒查询，给后端时间更新状态
+                    }
+                  } else if (status === 'uploading') {
+                    taskProgressDiv.textContent = `上传中... ${percent}%`;
+                    taskProgressDiv.style.color = '#075985';
+                    uploadingCount++;
+                  } else if (status === 'done') {
+                    if (taskInfo.result && taskInfo.result.ok) {
+                      let doneText = `完成: ${taskInfo.result.path || '成功'}`;
+                      if (taskInfo.result.exists) {
+                        doneText += ' (文件已存在，已覆盖)';
+                      }
+                      taskProgressDiv.textContent = doneText;
+                      taskProgressDiv.style.color = '#166534';
+                    } else {
+                      taskProgressDiv.textContent = `失败: ${taskInfo.result?.error || '未知错误'}`;
+                      taskProgressDiv.style.color = '#991b1b';
+                    }
+                    doneCount++;
+                  } else if (status === 'error' || status === 'cancelled') {
+                    taskProgressDiv.textContent = status === 'cancelled' ? '已取消' : `错误: ${taskInfo.result?.error || '未知错误'}`;
+                    taskProgressDiv.style.color = '#991b1b';
+                  } else {
+                    taskProgressDiv.textContent = '等待中...';
+                    taskProgressDiv.style.color = 'var(--muted)';
+                    pendingCount++;
+                  }
+                  
+                  totalProgress += percent;
+                  totalTasks++;
+                }
+              }
+            }
+            
+            
+            if (totalTasks > 0) {
+              const avgProgress = Math.floor(totalProgress / totalTasks);
+              let progressText = `总体进度: ${avgProgress}% (成功: ${progressData.success_count || 0}, 失败: ${progressData.error_count || 0}, 总计: ${progressData.total_count || totalTasks})`;
+              batchUploadProgress.textContent = progressText;
+            }
+          }
+        };
+
+        es.onerror = () => {
+          // 连接错误时，如果还没确认完成，尝试主动查询
+          if (!completionConfirmed) {
+            console.warn('SSE连接错误，尝试主动查询状态');
+            checkUploadCompletion();
+          }
+          
+          // 如果查询后仍没确认，才关闭连接
+          setTimeout(() => {
+            if (!completionConfirmed) {
+              es.close();
+              if (completionCheckTimer) {
+                clearInterval(completionCheckTimer);
+              }
+              if (currentBatchUploadId === batchId) {
+                batchUploadProgress.textContent = '连接中断，请刷新页面查看状态';
+                batchUploadStart22Btn.style.display = 'inline-block';
+                batchUploadStart9999Btn.style.display = 'inline-block';
+                batchUploadCancelBtn.style.display = 'none';
+                currentBatchUploadId = null;
+              }
+            }
+          }, 5000); // 给5秒时间查询状态
+        };
+      }).catch(err => {
+        batchUploadProgress.textContent = `失败: ${err}`;
+        batchUploadStart22Btn.style.display = 'inline-block';
+        batchUploadStart9999Btn.style.display = 'inline-block';
+      });
+    }
 
     function openBatchFota() {
       const count = Object.keys(selectedServers).length;
