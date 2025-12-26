@@ -13,6 +13,9 @@ import io
 import multiprocessing
 import sys
 from flask import Flask, jsonify, render_template_string, request, Response, stream_with_context
+from flask_socketio import SocketIO, emit, disconnect
+from gevent import pywsgi
+# 注意：gevent-websocket 相关代码已移除，当前终端功能使用 Flask-SocketIO
 from check_rack_status import (
     load_config,
     run_checks_once,
@@ -38,11 +41,50 @@ from check_rack_status import (
     create_transport,
 )
 import paramiko
+
+# 导入SSH适配层（用于Web终端）
+try:
+    from ssh_connection_adapter import SSHConnectionAdapter, ConnectionConfig
+    SSH_ADAPTER_AVAILABLE = True
+except ImportError:
+    SSH_ADAPTER_AVAILABLE = False
+    SSHConnectionAdapter = None
+    ConnectionConfig = None
+
+# 导入asyncio用于异步SSH连接
+import asyncio
 import socket
 import posixpath
 import os
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'terminal-secret-key-change-in-production'
+# 初始化SocketIO，优先使用eventlet（支持WebSocket），否则使用threading
+try:
+    import eventlet
+    async_mode = 'eventlet'
+except ImportError:
+    try:
+        import gevent
+        async_mode = 'gevent'
+    except ImportError:
+        async_mode = 'threading'
+
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode=async_mode,
+    logger=False,
+    engineio_logger=False,
+    ping_timeout=60,
+    ping_interval=25,
+    max_http_buffer_size=1e8,
+    allow_upgrades=True,
+    transports=['websocket', 'polling']
+)
+
+# WebSocket路由调试中间件（已移除，当前使用Flask-SocketIO）
+# 注意：当前终端功能使用Flask-SocketIO实现，不再需要gevent-websocket的ws_terminal函数
 
 status_cache = {
     "data": [],
@@ -1322,7 +1364,7 @@ def api_upload_folder():
                         file_obj = open(temp_file_path, 'rb')
                         
                         # 创建SFTP连接并确保目录存在
-                        transport = create_transport(server_ip, port, server_name)
+                        transport = create_transport(server_name, server_ip, port)
                         sftp = paramiko.SFTPClient.from_transport(transport)
                         
                         try:
@@ -2832,6 +2874,641 @@ def api_batch_fota_progress(batch_id):
         return jsonify({"error": f"服务器异常: {e}"}), 500
 
 
+# Terminal会话管理 (Flask-SocketIO版本)
+# 使用适配层时: {session_id: {"ssh_conn": ..., "ssh_shell": ..., "server_name": ..., "server_ip": ..., "port": ..., "adapter": ...}}
+# 使用paramiko时: {session_id: {"ssh_channel": ..., "ssh_transport": ..., "server_name": ..., "server_ip": ..., "port": ...}}
+terminal_sessions = {}
+terminal_sessions_lock = threading.Lock()
+
+# 异步事件循环管理（用于适配层）
+terminal_event_loops = {}  # {thread_id: event_loop}
+terminal_event_loops_lock = threading.Lock()
+
+def get_or_create_event_loop():
+    """获取或创建当前线程的事件循环"""
+    thread_id = threading.get_ident()
+    with terminal_event_loops_lock:
+        if thread_id not in terminal_event_loops:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            terminal_event_loops[thread_id] = loop
+        return terminal_event_loops[thread_id]
+
+# Flask-SocketIO事件处理器
+@socketio.on('connect')
+def handle_terminal_connect():
+    """WebSocket连接建立时触发"""
+    # 连接建立时的处理（如果需要认证，可以在这里添加）
+    pass
+
+@socketio.on('disconnect')
+def handle_terminal_disconnect():
+    """WebSocket连接断开时触发"""
+    session_id = request.sid
+    
+    # #region agent log
+    import json as json_log
+    import time
+    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"ALL","location":"web_ui.py:2952","message":"handle_terminal_disconnect called","data":{"session_id":session_id},"timestamp":int(time.time()*1000)}) + '\n')
+    # #endregion
+    
+    log_srv(f"终端断开连接: {session_id}")
+    
+    # 清理SSH会话
+    with terminal_sessions_lock:
+        if session_id not in terminal_sessions:
+            return
+        
+        session = terminal_sessions[session_id]
+        
+        try:
+            # 1. 关闭 Shell（适配层方式 - 异步）
+            ssh_shell = session.get("ssh_shell")
+            if ssh_shell:
+                try:
+                    # 检查是否已关闭
+                    if hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed():
+                        log_srv(f"[{session_id}] Shell已关闭")
+                    elif hasattr(ssh_shell, 'is_closing') and ssh_shell.is_closing():
+                        log_srv(f"[{session_id}] Shell正在关闭")
+                    else:
+                        # ShellWrapper的close()是异步方法
+                        loop = session.get("loop") or get_or_create_event_loop()
+                        close_coro = ssh_shell.close()
+                        
+                        if asyncio.iscoroutine(close_coro):
+                            if loop.is_running():
+                                asyncio.run_coroutine_threadsafe(close_coro, loop)
+                            else:
+                                loop.run_until_complete(close_coro)
+                        else:
+                            log_srv(f"[{session_id}] Shell close()返回非协程: {type(close_coro)}")
+                except Exception as e:
+                    log_srv(f"[{session_id}] 关闭shell失败: {e}")
+                    import traceback
+                    log_srv(traceback.format_exc())
+            
+            # 2. 关闭 SSH 连接（asyncssh方式）
+            ssh_conn = session.get("ssh_conn")
+            if ssh_conn:
+                try:
+                    # asyncssh.SSHClientConnection.close() 是同步方法，返回 None
+                    # 直接调用即可，不需要特殊处理
+                    if hasattr(ssh_conn, 'is_closed') and ssh_conn.is_closed():
+                        log_srv(f"[{session_id}] SSH连接已关闭")
+                    elif hasattr(ssh_conn, 'is_closing') and ssh_conn.is_closing():
+                        log_srv(f"[{session_id}] SSH连接正在关闭")
+                    else:
+                        # 直接调用close()，它是同步方法
+                        ssh_conn.close()
+                        log_srv(f"[{session_id}] SSH连接已关闭")
+                except Exception as e:
+                    log_srv(f"[{session_id}] 关闭SSH连接失败: {e}")
+                    import traceback
+                    log_srv(traceback.format_exc())
+            
+            # 3. 关闭 paramiko 连接（同步方式）
+            ssh_channel = session.get("ssh_channel")
+            if ssh_channel:
+                try:
+                    if not ssh_channel.closed:
+                        ssh_channel.close()
+                        log_srv(f"[{session_id}] Paramiko通道已关闭")
+                except Exception as e:
+                    log_srv(f"[{session_id}] 关闭Paramiko通道失败: {e}")
+            
+            ssh_transport = session.get("ssh_transport")
+            if ssh_transport:
+                try:
+                    if ssh_transport.is_active():
+                        ssh_transport.close()
+                        log_srv(f"[{session_id}] Paramiko传输已关闭")
+                except Exception as e:
+                    log_srv(f"[{session_id}] 关闭Paramiko传输失败: {e}")
+            
+        except Exception as e:
+            log_srv(f"[{session_id}] 清理会话时发生异常: {e}")
+            import traceback
+            log_srv(traceback.format_exc())
+        finally:
+            # 从会话字典中移除
+            if session_id in terminal_sessions:
+                del terminal_sessions[session_id]
+                log_srv(f"[{session_id}] 会话已从字典中移除")
+
+@socketio.on('start_ssh')
+def handle_start_ssh(data):
+    """前端请求开始一个新的SSH会话"""
+    session_id = request.sid
+    server_name = data.get('server_name', '').strip()
+    server_ip = data.get('server_ip', '').strip()
+    port = int(data.get('port', 22))
+    cols = int(data.get('cols', 80))
+    rows = int(data.get('rows', 24))
+    
+    if not server_name or not server_ip:
+        emit('error', {'message': '缺少服务器信息'})
+        return
+    
+    # 优先使用适配层（异步），如果不可用则回退到paramiko（同步）
+    use_adapter = SSH_ADAPTER_AVAILABLE
+    
+    if use_adapter:
+        # 使用适配层（异步方式）
+        try:
+            async def connect_ssh_async():
+                """异步建立SSH连接"""
+                try:
+                    # #region agent log
+                    import json as json_log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"L","location":"web_ui.py:3008","message":"connect_ssh_async entry","data":{"server_name":server_name,"server_ip":server_ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    # 确保配置已加载，并重新获取 ssh_username（避免使用过期的值）
+                    from check_rack_status import ssh_username as current_ssh_username
+                    # 如果 ssh_username 为空，抛出异常
+                    if not current_ssh_username or not current_ssh_username.strip():
+                        error_msg = f"SSH用户名未配置：请在 config.json 中设置 'ssh_username' 字段"
+                        import logging
+                        logging.error(error_msg)
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"P","location":"web_ui.py:3014","message":"username validation failed","data":{"current_ssh_username":current_ssh_username,"error":error_msg},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        raise ValueError(error_msg)
+                    
+                    final_username = current_ssh_username.strip()
+                    
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"P","location":"web_ui.py:3022","message":"username resolution","data":{"current_ssh_username":current_ssh_username,"final_username":final_username},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    # 解析认证信息
+                    auth_mode = resolve_auth_mode(server_name)
+                    key_path = None
+                    if auth_mode == "key":
+                        key_path = resolve_key(server_name, port)
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"M","location":"web_ui.py:3022","message":"after resolve_key","data":{"auth_mode":auth_mode,"key_path":key_path,"key_path_type":type(key_path).__name__ if key_path else None},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        
+                        if key_path and not os.path.isabs(key_path):
+                            # 转换为绝对路径
+                            script_dir = os.path.dirname(os.path.abspath(__file__))
+                            key_path = os.path.join(script_dir, key_path)
+                            # #region agent log
+                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"N","location":"web_ui.py:3027","message":"after path conversion","data":{"key_path":key_path,"key_path_exists":os.path.exists(key_path) if key_path else False},"timestamp":int(time.time()*1000)}) + '\n')
+                            # #endregion
+                    
+                    # 创建适配器和配置
+                    adapter = SSHConnectionAdapter(enable_connection_pool=False)
+                    
+                    # 主机密钥验证配置
+                    # 方案1：自动接受首次连接（推荐，适合过渡期）
+                    # 方案2：使用预先收集的known_hosts文件（最安全，适合生产环境）
+                    # 方案3：跳过验证（仅用于测试环境）- 当前启用
+                    # 详细说明请参考 docs/enable_host_key_verification.md
+                    config = ConnectionConfig(
+                        host=server_ip,
+                        port=port,
+                        username=final_username,  # 使用明确解析的用户名，避免使用系统环境变量
+                        client_keys=[key_path] if key_path else None,
+                        connect_timeout=ssh_timeout,
+                        # 方案3：测试环境（当前配置）- 跳过主机密钥验证
+                        skip_host_key_check=True,       # 跳过主机密钥验证（客户端不验证服务器身份）
+                        known_hosts=None                # 不使用 known_hosts 文件
+                        # 方案1：自动接受首次连接（取消注释以启用）
+                        # skip_host_key_check=False,      # 启用主机密钥验证
+                        # client_host_keys='auto',        # 标记为自动模式（适配层内部处理，不会传递给asyncssh）
+                        # known_hosts='known_hosts'       # 保存主机密钥的文件（asyncssh会自动创建和更新）
+                        # 方案2：使用预先收集的known_hosts文件（取消注释以启用）
+                        # skip_host_key_check=False,      # 启用主机密钥验证
+                        # known_hosts='known_hosts'       # 使用预先收集的主机密钥文件
+                    )
+                    
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"O","location":"web_ui.py:3044","message":"ConnectionConfig created","data":{"config_host":config.host,"config_port":config.port,"config_username":config.username,"config_client_keys":config.client_keys,"config_skip_host_key_check":config.skip_host_key_check,"config_client_host_keys":config.client_host_keys,"config_known_hosts":config.known_hosts},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    # 建立连接
+                    ssh_conn = await adapter.create_connection(config)
+                    
+                    # 创建交互式shell
+                    ssh_shell = await adapter.open_shell(
+                        ssh_conn,
+                        term_type='xterm-256color',
+                        cols=cols,
+                        rows=rows
+                    )
+                    
+                    return adapter, ssh_conn, ssh_shell
+                except Exception as e:
+                    log_srv(f"异步SSH连接失败: {e}")
+                    raise
+            
+            # 在新线程中运行异步连接
+            def run_async_connection():
+                """在新线程中运行异步连接"""
+                loop = get_or_create_event_loop()
+                try:
+                    adapter, ssh_conn, ssh_shell = loop.run_until_complete(connect_ssh_async())
+                    
+                    # 保存会话
+                    with terminal_sessions_lock:
+                        terminal_sessions[session_id] = {
+                            "ssh_conn": ssh_conn,
+                            "ssh_shell": ssh_shell,
+                            "adapter": adapter,
+                            "server_name": server_name,
+                            "server_ip": server_ip,
+                            "port": port,
+                            "loop": loop
+                        }
+                    
+                    # 发送连接成功消息
+                    socketio.emit('connected', {'session_id': session_id}, room=session_id)
+                    
+                    # 启动异步读取SSH输出
+                    async def read_ssh_output_async():
+                        """异步读取SSH输出"""
+                        try:
+                            while True:
+                                # 读取shell输出（asyncssh使用read()方法）
+                                try:
+                                    # asyncssh的read()方法返回bytes，需要decode
+                                    data = await asyncio.wait_for(ssh_shell.read(4096), timeout=0.1)
+                                    if data:
+                                        # 确保data是bytes类型，如果是str则直接使用
+                                        if isinstance(data, bytes):
+                                            socketio.emit('output', {'data': data.decode('utf-8', errors='ignore')}, room=session_id)
+                                        else:
+                                            socketio.emit('output', {'data': str(data)}, room=session_id)
+                                except asyncio.TimeoutError:
+                                    # 超时是正常的，继续循环
+                                    pass
+                                except Exception as read_error:
+                                    # #region agent log
+                                    import json as json_log
+                                    import time
+                                    import traceback
+                                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3194","message":"read error in read_ssh_output_async","data":{"error":str(read_error),"error_type":type(read_error).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
+                                    # #endregion
+                                    # 读取错误，可能连接已关闭
+                                    log_srv(f"SSH读取错误: {read_error}")
+                                    break
+                                
+                                # 优化：更准确的连接状态检测
+                                # 根据 AsyncSSH 2.x 最佳实践，只在明确检测到关闭时才退出循环
+                                # 不检查 is_closing，因为可能只是临时状态，会导致误判
+                                try:
+                                    # 检查退出状态（如果shell已退出）
+                                    if hasattr(ssh_shell, 'exit_status'):
+                                        exit_status = ssh_shell.exit_status()
+                                        if exit_status is not None:
+                                            # #region agent log
+                                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3217","message":"breaking due to exit_status","data":{"exit_status":exit_status},"timestamp":int(time.time()*1000)}) + '\n')
+                                            # #endregion
+                                            log_srv(f"Shell退出状态: {exit_status}，退出读取循环")
+                                            break
+                                    
+                                    # 关键改进：只检查 is_closed()，不检查 is_closing()
+                                    # is_closing() 可能返回 True 但连接仍然可用，导致误判
+                                    if hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed():
+                                        # #region agent log
+                                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3225","message":"breaking due to is_closed","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                                        # #endregion
+                                        log_srv("Shell已关闭，退出读取循环")
+                                        break
+                                    
+                                    # 不再检查 is_closing()，避免误判
+                                    # 如果连接真的有问题，会在下一次 read() 时抛出异常
+                                    
+                                except Exception as check_error:
+                                    # #region agent log
+                                    import traceback
+                                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3233","message":"exception in shell state check","data":{"error":str(check_error),"error_type":type(check_error).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
+                                    # #endregion
+                                    # 如果检查退出状态失败，继续读取（避免误判）
+                                    # 不记录为错误，因为这可能是正常的（例如方法不存在）
+                                    pass
+                                
+                                await asyncio.sleep(0.01)
+                        except Exception as e:
+                            # #region agent log
+                            import traceback
+                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3225","message":"outer exception in read_ssh_output_async","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
+                            # #endregion
+                            try:
+                                socketio.emit('error', {'message': f'SSH读取错误: {str(e)}'}, room=session_id)
+                            except:
+                                pass
+                        finally:
+                            try:
+                                socketio.emit('disconnected', {}, room=session_id)
+                            except:
+                                pass
+                    
+                    # 在事件循环中运行读取任务
+                    asyncio.run_coroutine_threadsafe(read_ssh_output_async(), loop)
+                    
+                    # 启动事件循环（如果还没有运行）
+                    def run_event_loop():
+                        """在新线程中运行事件循环"""
+                        loop.run_forever()
+                    
+                    if not loop.is_running():
+                        loop_thread = threading.Thread(target=run_event_loop, daemon=True)
+                        loop_thread.start()
+                    
+                except Exception as e:
+                    try:
+                        socketio.emit('error', {'message': f'连接错误: {str(e)}'}, room=session_id)
+                    except:
+                        pass
+            
+            # 启动连接线程
+            conn_thread = threading.Thread(target=run_async_connection, daemon=True)
+            conn_thread.start()
+            
+        except Exception as e:
+            log_srv(f"启动异步SSH连接失败: {e}")
+            emit('error', {'message': f'连接错误: {str(e)}'})
+    
+    else:
+        # 回退到paramiko（同步方式）
+        ssh_channel = None
+        ssh_transport = None
+        
+        try:
+            # 建立SSH连接
+            ssh_transport = create_transport(server_name, server_ip, port)
+            if not ssh_transport:
+                emit('error', {'message': 'SSH连接失败'})
+                return
+            
+            # 创建交互式shell
+            ssh_channel = ssh_transport.open_session()
+            ssh_channel.get_pty(term='xterm-256color', width=cols, height=rows)
+            ssh_channel.invoke_shell()
+            
+            # 保存会话
+            with terminal_sessions_lock:
+                terminal_sessions[session_id] = {
+                    "ssh_channel": ssh_channel,
+                    "ssh_transport": ssh_transport,
+                    "server_name": server_name,
+                    "server_ip": server_ip,
+                    "port": port
+                }
+            
+            # 发送连接成功消息
+            emit('connected', {'session_id': session_id})
+            
+            # 启动线程读取SSH输出
+            def read_ssh_output():
+                try:
+                    while True:
+                        if ssh_channel.recv_ready():
+                            data = ssh_channel.recv(4096)
+                            if data:
+                                socketio.emit('output', {'data': data.decode('utf-8', errors='ignore')}, room=session_id)
+                        elif ssh_channel.exit_status_ready():
+                            break
+                        time.sleep(0.01)
+                except Exception as e:
+                    try:
+                        socketio.emit('error', {'message': f'SSH读取错误: {str(e)}'}, room=session_id)
+                    except:
+                        pass
+                finally:
+                    try:
+                        socketio.emit('disconnected', {}, room=session_id)
+                    except:
+                        pass
+            
+            ssh_thread = threading.Thread(target=read_ssh_output, daemon=True)
+            ssh_thread.start()
+            
+        except Exception as e:
+            try:
+                emit('error', {'message': f'连接错误: {str(e)}'})
+            except:
+                pass
+            # 清理资源
+            if ssh_channel:
+                try:
+                    ssh_channel.close()
+                except:
+                    pass
+            if ssh_transport:
+                try:
+                    ssh_transport.close()
+                except:
+                    pass
+
+@socketio.on('terminal_input')
+def handle_terminal_input(data):
+    """接收从前端终端发来的数据（按键）"""
+    session_id = request.sid
+    input_data = data.get('data', '')
+    
+    # 重要：记录前端发送的原始数据格式（特别是回车符）
+    # 回车键可能发送 '\n'、'\r' 或 '\r\n'，这些都是正常的
+    input_repr = repr(input_data)
+    has_newline = '\n' in input_data
+    has_carriage_return = '\r' in input_data
+    
+    # #region agent log
+    import json as json_log
+    import time
+    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3330","message":"handle_terminal_input entry","data":{"session_id":session_id,"input_data":input_repr,"input_data_type":type(input_data).__name__,"input_data_len":len(input_data) if input_data else 0,"has_newline":has_newline,"has_carriage_return":has_carriage_return},"timestamp":int(time.time()*1000)}) + '\n')
+    # #endregion
+    
+    # 记录包含换行符的数据（用于调试回车键问题）
+    if has_newline or has_carriage_return:
+        log_srv(f"收到前端输入（包含换行符）: {input_repr}")
+    
+    with terminal_sessions_lock:
+        if session_id in terminal_sessions:
+            session = terminal_sessions[session_id]
+            
+            # 适配层方式（异步）
+            ssh_shell = session.get("ssh_shell")
+            if ssh_shell:
+                try:
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3343","message":"before shell state check","data":{"has_is_closing":hasattr(ssh_shell, 'is_closing'),"has_is_closed":hasattr(ssh_shell, 'is_closed')},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    # 检查shell是否已关闭
+                    is_closing = hasattr(ssh_shell, 'is_closing') and ssh_shell.is_closing()
+                    is_closed = hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed()
+                    
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3347","message":"after shell state check","data":{"is_closing":is_closing,"is_closed":is_closed},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    if is_closing:
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3350","message":"shell is closing, returning early","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        return
+                    if is_closed:
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3353","message":"shell is closed, returning early","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        return
+                    
+                    # ShellWrapper的write()现在是异步方法，需要使用await
+                    # 确保输入数据是字符串
+                    if isinstance(input_data, bytes):
+                        input_data = input_data.decode('utf-8', errors='ignore')
+                    
+                    # 获取事件循环并异步调用write()
+                    loop = session.get("loop") or get_or_create_event_loop()
+                    
+                    # #region agent log
+                    import threading
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3360","message":"before write coro creation","data":{"loop_is_running":loop.is_running(),"current_thread":threading.current_thread().name,"loop_thread_id":id(loop)},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    write_coro = ssh_shell.write(input_data)
+                    
+                    # #region agent log
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3363","message":"after write coro creation","data":{"is_coroutine":asyncio.iscoroutine(write_coro),"loop_is_running":loop.is_running()},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    if loop.is_running():
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3367","message":"using run_coroutine_threadsafe","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        # 如果事件循环正在运行，使用run_coroutine_threadsafe
+                        future = asyncio.run_coroutine_threadsafe(write_coro, loop)
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3370","message":"after run_coroutine_threadsafe","data":{"future_done":future.done()},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                    else:
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3373","message":"using run_until_complete","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        # 如果事件循环未运行，运行直到完成
+                        loop.run_until_complete(write_coro)
+                        # #region agent log
+                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3376","message":"after run_until_complete","data":{},"timestamp":int(time.time()*1000)}) + '\n')
+                        # #endregion
+                        
+                except Exception as e:
+                    # #region agent log
+                    import traceback
+                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3380","message":"exception in handle_terminal_input","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc(),"input_data":input_repr},"timestamp":int(time.time()*1000)}) + '\n')
+                    # #endregion
+                    
+                    # 重要：记录详细的错误信息，包括输入数据
+                    error_msg = f"SSH写入错误: {e} (输入数据: {input_repr})"
+                    log_srv(error_msg)
+                    import traceback
+                    log_srv(traceback.format_exc())
+                    
+                    # 重要：不要因为写入失败就断开连接
+                    # 只发送错误消息给前端，让用户知道发生了什么
+                    try:
+                        socketio.emit('error', {'message': f'输入处理失败: {str(e)}'}, room=session_id)
+                    except:
+                        pass
+                    
+                    # 不抛出异常，避免触发断开连接逻辑
+                    # 如果连接真的有问题，会在读取循环中检测到
+            
+            # paramiko方式（同步）
+            ssh_channel = session.get("ssh_channel")
+            if ssh_channel and not ssh_channel.closed:
+                try:
+                    ssh_channel.send(input_data)
+                except:
+                    pass
+
+@socketio.on('terminal_resize')
+def handle_terminal_resize(data):
+    """调整终端尺寸"""
+    session_id = request.sid
+    cols = int(data.get('cols', 80))
+    rows = int(data.get('rows', 24))
+    
+    with terminal_sessions_lock:
+        if session_id in terminal_sessions:
+            session = terminal_sessions[session_id]
+            
+            # 适配层方式（异步）
+            ssh_shell = session.get("ssh_shell")
+            if ssh_shell:
+                try:
+                    # 检查shell是否已关闭
+                    if hasattr(ssh_shell, 'is_closing') and ssh_shell.is_closing():
+                        return
+                    if hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed():
+                        return
+                    
+                    # ShellWrapper的change_terminal_size()和resize()现在是异步方法，需要使用await
+                    loop = session.get("loop") or get_or_create_event_loop()
+                    
+                    if hasattr(ssh_shell, 'change_terminal_size'):
+                        resize_coro = ssh_shell.change_terminal_size(cols, rows)
+                        if loop.is_running():
+                            asyncio.run_coroutine_threadsafe(resize_coro, loop)
+                        else:
+                            loop.run_until_complete(resize_coro)
+                    elif hasattr(ssh_shell, 'resize'):
+                        resize_coro = ssh_shell.resize(cols, rows)
+                        if loop.is_running():
+                            asyncio.run_coroutine_threadsafe(resize_coro, loop)
+                        else:
+                            loop.run_until_complete(resize_coro)
+                    else:
+                        log_srv(f"警告: shell对象不支持终端尺寸调整方法")
+                except Exception as e:
+                    log_srv(f"调整终端大小失败（适配层）: {e}")
+                    import traceback
+                    log_srv(traceback.format_exc())
+                    import traceback
+                    log_srv(traceback.format_exc())
+            
+            # paramiko方式（同步）
+            ssh_channel = session.get("ssh_channel")
+            if ssh_channel and not ssh_channel.closed:
+                try:
+                    ssh_channel.resize_pty(width=cols, height=rows)
+                except:
+                    pass
+
+# 保留旧的gevent-websocket处理函数（用于向后兼容，如果仍在使用）
+# ws_terminal() 函数已移除
+# 当前终端功能使用 Flask-SocketIO 实现（handle_start_ssh, handle_terminal_input 等）
+# 不再需要 gevent-websocket 的 ws_terminal 函数
+
+
 @app.route("/api/batch-fota/cancel/<batch_id>", methods=["POST"])
 def api_batch_fota_cancel(batch_id):
     """取消批量FOTA任务"""
@@ -3004,6 +3681,7 @@ def index():
               <th>座舱域版本</th>
               <th>上传</th>
               <th>FOTA</th>
+              <th>远程连接</th>
               <th>时间</th>
             </tr>
           </thead>
@@ -3184,6 +3862,23 @@ def index():
     </div>
   </div>
 
+  <!-- 网页Terminal弹窗 -->
+  <div class="modal-backdrop" id="terminalModal" style="display: none;">
+    <div class="modal" style="width: 90%; max-width: 1200px; height: 90%; max-height: 800px; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0;">远程终端 - <span id="terminalServerInfo"></span></h3>
+        <div>
+          <button class="btn" onclick="terminalClear()" style="background: #6b7280; color: #fff; border: none; margin-right: 8px;">清屏</button>
+          <button class="btn" onclick="closeTerminal()" style="background: #ef4444; color: #fff; border: none;">关闭</button>
+        </div>
+      </div>
+      <div id="terminalContainer" style="flex: 1; background: #1e1e1e; border-radius: 8px; padding: 12px; overflow: hidden; min-height: 400px;"></div>
+      <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+        <span id="terminalStatus">连接中...</span>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="batchUploadModal">
     <div class="modal" style="width: 500px;">
       <h3>批量上传文件</h3>
@@ -3208,6 +3903,25 @@ def index():
       </div>
     </div>
   </div>
+
+  <!-- xterm.js 库 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+  <!-- Socket.IO 客户端库 (版本4.5.4，兼容Flask-SocketIO 5.x) -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // SocketIO配置：确保使用WebSocket传输
+    if (typeof io !== 'undefined') {
+      // 配置SocketIO使用WebSocket传输
+      window.socketioConfig = {
+        transports: ['websocket', 'polling'],
+        upgrade: true,
+        rememberUpgrade: true
+      };
+    }
+  </script>
 
   <script>
     function tag(text, cls) {
@@ -4026,6 +4740,10 @@ def index():
             <td>
               <button class="btn" onclick="openFota('${item.server_name}','${item.server_ip}')" ${(item.fota_status_22 || item.fota_status_9999) ? 'disabled style="opacity: 0.5;"' : ''}>FOTA升级</button>
             </td>
+            <td>
+              <button class="btn" onclick="openTerminal('${item.server_name}','${item.server_ip}',22)" style="background: #8b5cf6; color: #fff; border: none;">22端口</button>
+              <button class="btn" onclick="openTerminal('${item.server_name}','${item.server_ip}',9999)" style="background: #8b5cf6; color: #fff; border: none; margin-top: 4px;">9999端口</button>
+            </td>
             <td>${item.timestamp}</td>
           `;
           tbody.appendChild(tr);
@@ -4086,6 +4804,227 @@ def index():
     function updateSelectedCount() {
       const count = Object.keys(selectedServers).length;
       document.getElementById('selectedCount').textContent = `已选择: ${count}`;
+    }
+
+    // Terminal相关变量 (Flask-SocketIO版本)
+    let currentTerminal = null;
+    let terminalSocket = null;
+    let terminalFitAddon = null;
+    let currentTerminalInfo = { name: '', ip: '', port: 22 };
+
+    function openTerminal(name, ip, port) {
+      currentTerminalInfo = { name, ip, port };
+      const terminalModal = document.getElementById('terminalModal');
+      const terminalContainer = document.getElementById('terminalContainer');
+      const terminalServerInfo = document.getElementById('terminalServerInfo');
+      const terminalStatus = document.getElementById('terminalStatus');
+      
+      terminalServerInfo.textContent = `${name} (${ip}:${port})`;
+      terminalStatus.textContent = '正在连接...';
+      terminalModal.style.display = 'flex';
+      
+      // 清空容器
+      terminalContainer.innerHTML = '';
+      
+      // 初始化xterm
+      if (currentTerminal) {
+        currentTerminal.dispose();
+      }
+      
+      currentTerminal = new Terminal({
+        fontSize: 14,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        theme: {
+          background: '#1e1e1e',
+          foreground: '#d4d4d4',
+          cursor: '#ffffff',
+          black: '#000000',
+          red: '#cd3131',
+          green: '#0dbc79',
+          yellow: '#e5e510',
+          blue: '#2472c8',
+          magenta: '#bc3fbc',
+          cyan: '#11a8cd',
+          white: '#e5e5e5'
+        },
+        cursorBlink: true,
+        scrollback: 10000,
+        convertEol: true,
+      });
+      
+      // 加载插件
+      terminalFitAddon = new FitAddon.FitAddon();
+      const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+      
+      currentTerminal.loadAddon(terminalFitAddon);
+      currentTerminal.loadAddon(webLinksAddon);
+      
+      // 打开终端
+      currentTerminal.open(terminalContainer);
+      terminalFitAddon.fit();
+      
+      // 处理窗口大小变化
+      const handleResize = () => {
+        terminalFitAddon.fit();
+        if (terminalSocket && terminalSocket.connected) {
+          const dims = terminalFitAddon.proposeDimensions();
+          if (dims) {
+            terminalSocket.emit('terminal_resize', {
+              cols: dims.cols,
+              rows: dims.rows
+            });
+          }
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      // 连接SocketIO
+      connectTerminalSocketIO(name, ip, port);
+      
+      // 终端输入转发到SocketIO
+      currentTerminal.onData(data => {
+        if (terminalSocket && terminalSocket.connected) {
+          terminalSocket.emit('terminal_input', {
+            data: data
+          });
+        }
+      });
+      
+      // 存储resize处理函数以便清理
+      currentTerminal._resizeHandler = handleResize;
+    }
+
+    function connectTerminalSocketIO(name, ip, port) {
+      // 如果已有连接，先断开
+      if (terminalSocket) {
+        terminalSocket.disconnect();
+      }
+      
+      // 创建SocketIO连接，明确指定传输方式和配置
+      // 注意：如果WebSocket失败，会自动降级到polling
+      const socketioOptions = {
+        transports: ['polling', 'websocket'],  // 先尝试polling，再升级到websocket
+        upgrade: true,
+        rememberUpgrade: false,  // 不记住升级，每次都尝试
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
+        timeout: 20000,
+        forceNew: false,  // 复用连接
+        autoConnect: true
+      };
+      
+      try {
+        terminalSocket = io(socketioOptions);
+      } catch (error) {
+        console.error('SocketIO连接创建失败:', error);
+        document.getElementById('terminalStatus').textContent = '连接失败: ' + error.message;
+        document.getElementById('terminalStatus').style.color = '#ef4444';
+        return;
+      }
+      
+      terminalSocket.on('connect', () => {
+        document.getElementById('terminalStatus').textContent = '已连接';
+        document.getElementById('terminalStatus').style.color = '#10b981';
+        const transport = terminalSocket.io.engine.transport.name;
+        currentTerminal.writeln(`\\x1b[32m*** SocketIO连接已建立 (传输: ${transport}) ***\\x1b[0m\\r\\n`);
+        
+        // 发送初始尺寸
+        if (terminalFitAddon) {
+          const dims = terminalFitAddon.proposeDimensions();
+          if (dims) {
+            terminalSocket.emit('terminal_resize', {
+              cols: dims.cols,
+              rows: dims.rows
+            });
+          }
+        }
+        
+        // 启动SSH会话
+        terminalSocket.emit('start_ssh', {
+          server_name: name,
+          server_ip: ip,
+          port: port
+        });
+      });
+      
+      // 监听传输升级事件
+      terminalSocket.io.on('upgrade', () => {
+        const transport = terminalSocket.io.engine.transport.name;
+        currentTerminal.writeln(`\\x1b[33m*** 传输已升级到: ${transport} ***\\x1b[0m\\r\\n`);
+      });
+      
+      // 监听传输错误
+      terminalSocket.io.on('upgradeError', (error) => {
+        console.warn('传输升级失败，使用polling:', error);
+        currentTerminal.writeln('\\x1b[33m*** WebSocket升级失败，使用polling传输 ***\\x1b[0m\\r\\n');
+      });
+      
+      terminalSocket.on('connected', (data) => {
+        currentTerminal.writeln('\\x1b[32m*** SSH连接已建立 ***\\x1b[0m\\r\\n');
+      });
+      
+      terminalSocket.on('output', (data) => {
+        // 终端输出
+        if (data.data) {
+          currentTerminal.write(data.data);
+        }
+      });
+      
+      terminalSocket.on('error', (data) => {
+        currentTerminal.writeln(`\\x1b[31m*** 错误: ${data.message || '未知错误'} ***\\x1b[0m\\r\\n`);
+        document.getElementById('terminalStatus').textContent = `错误: ${data.message || '未知错误'}`;
+        document.getElementById('terminalStatus').style.color = '#ef4444';
+      });
+      
+      terminalSocket.on('disconnected', () => {
+        currentTerminal.writeln('\\x1b[33m*** SSH连接已断开 ***\\x1b[0m\\r\\n');
+        document.getElementById('terminalStatus').textContent = 'SSH连接已断开';
+        document.getElementById('terminalStatus').style.color = '#f59e0b';
+      });
+      
+      terminalSocket.on('disconnect', () => {
+        document.getElementById('terminalStatus').textContent = '连接已断开';
+        document.getElementById('terminalStatus').style.color = '#6b7280';
+        currentTerminal.writeln('\\x1b[33m*** SocketIO连接已关闭 ***\\x1b[0m\\r\\n');
+      });
+      
+      terminalSocket.on('connect_error', (error) => {
+        currentTerminal.writeln('\\x1b[31m*** 连接错误 ***\\x1b[0m\\r\\n');
+        document.getElementById('terminalStatus').textContent = '连接错误';
+        document.getElementById('terminalStatus').style.color = '#ef4444';
+        console.error('SocketIO连接错误:', error);
+      });
+    }
+
+    function terminalClear() {
+      if (currentTerminal) {
+        currentTerminal.clear();
+      }
+    }
+
+    function closeTerminal() {
+      // 关闭SocketIO连接
+      if (terminalSocket) {
+        terminalSocket.disconnect();
+        terminalSocket = null;
+      }
+      
+      // 移除resize监听器
+      if (currentTerminal && currentTerminal._resizeHandler) {
+        window.removeEventListener('resize', currentTerminal._resizeHandler);
+      }
+      
+      // 清理终端
+      if (currentTerminal) {
+        currentTerminal.dispose();
+        currentTerminal = null;
+      }
+      
+      // 关闭弹窗
+      document.getElementById('terminalModal').style.display = 'none';
     }
 
     let currentBatchId = null;
@@ -4966,5 +5905,16 @@ if __name__ == "__main__":
         status_cache["error"] = str(e)
 
     start_background()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    
+    # 检查路由注册
+    # #region agent log
+    import json as json_log
+    ws_routes = [str(rule) for rule in app.url_map.iter_rules() if '/ws/' in str(rule)]
+    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"web_ui.py:5376","message":"checking routes before server start","data":{"ws_routes":ws_routes,"all_routes_count":len(list(app.url_map.iter_rules()))},"timestamp":int(time.time()*1000)}) + '\n')
+    # #endregion
+    
+    # 使用Flask-SocketIO启动服务器
+    print(f"Web服务器启动在 http://0.0.0.0:5000 (支持WebSocket via Flask-SocketIO, async_mode={async_mode})")
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
 
