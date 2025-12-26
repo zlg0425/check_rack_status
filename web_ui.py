@@ -1555,8 +1555,6 @@ def api_upload_progress(task_id):
 @app.route("/api/download/stream")
 def api_download_stream():
     """流式下载文件或文件夹到浏览器（直接另存为）"""
-    import logging
-    log_file = os.path.join(os.path.dirname(__file__), '.cursor', 'debug.log')
     try:
         server_name = request.args.get("server_name", "").strip()
         server_ip = request.args.get("server_ip", "").strip()
@@ -2906,13 +2904,6 @@ def handle_terminal_disconnect():
     """WebSocket连接断开时触发"""
     session_id = request.sid
     
-    # #region agent log
-    import json as json_log
-    import time
-    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"ALL","location":"web_ui.py:2952","message":"handle_terminal_disconnect called","data":{"session_id":session_id},"timestamp":int(time.time()*1000)}) + '\n')
-    # #endregion
-    
     log_srv(f"终端断开连接: {session_id}")
     
     # 清理SSH会话
@@ -3020,12 +3011,6 @@ def handle_start_ssh(data):
             async def connect_ssh_async():
                 """异步建立SSH连接"""
                 try:
-                    # #region agent log
-                    import json as json_log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"L","location":"web_ui.py:3008","message":"connect_ssh_async entry","data":{"server_name":server_name,"server_ip":server_ip,"port":port},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
-                    
                     # 确保配置已加载，并重新获取 ssh_username（避免使用过期的值）
                     from check_rack_status import ssh_username as current_ssh_username
                     # 如果 ssh_username 为空，抛出异常
@@ -3033,37 +3018,20 @@ def handle_start_ssh(data):
                         error_msg = f"SSH用户名未配置：请在 config.json 中设置 'ssh_username' 字段"
                         import logging
                         logging.error(error_msg)
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"P","location":"web_ui.py:3014","message":"username validation failed","data":{"current_ssh_username":current_ssh_username,"error":error_msg},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         raise ValueError(error_msg)
                     
                     final_username = current_ssh_username.strip()
-                    
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"P","location":"web_ui.py:3022","message":"username resolution","data":{"current_ssh_username":current_ssh_username,"final_username":final_username},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
                     
                     # 解析认证信息
                     auth_mode = resolve_auth_mode(server_name)
                     key_path = None
                     if auth_mode == "key":
                         key_path = resolve_key(server_name, port)
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"M","location":"web_ui.py:3022","message":"after resolve_key","data":{"auth_mode":auth_mode,"key_path":key_path,"key_path_type":type(key_path).__name__ if key_path else None},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         
                         if key_path and not os.path.isabs(key_path):
                             # 转换为绝对路径
                             script_dir = os.path.dirname(os.path.abspath(__file__))
                             key_path = os.path.join(script_dir, key_path)
-                            # #region agent log
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"N","location":"web_ui.py:3027","message":"after path conversion","data":{"key_path":key_path,"key_path_exists":os.path.exists(key_path) if key_path else False},"timestamp":int(time.time()*1000)}) + '\n')
-                            # #endregion
                     
                     # 创建适配器和配置
                     adapter = SSHConnectionAdapter(enable_connection_pool=False)
@@ -3090,11 +3058,6 @@ def handle_start_ssh(data):
                         # skip_host_key_check=False,      # 启用主机密钥验证
                         # known_hosts='known_hosts'       # 使用预先收集的主机密钥文件
                     )
-                    
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"O","location":"web_ui.py:3044","message":"ConnectionConfig created","data":{"config_host":config.host,"config_port":config.port,"config_username":config.username,"config_client_keys":config.client_keys,"config_skip_host_key_check":config.skip_host_key_check,"config_client_host_keys":config.client_host_keys,"config_known_hosts":config.known_hosts},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
                     
                     # 建立连接
                     ssh_conn = await adapter.create_connection(config)
@@ -3153,13 +3116,6 @@ def handle_start_ssh(data):
                                     # 超时是正常的，继续循环
                                     pass
                                 except Exception as read_error:
-                                    # #region agent log
-                                    import json as json_log
-                                    import time
-                                    import traceback
-                                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3194","message":"read error in read_ssh_output_async","data":{"error":str(read_error),"error_type":type(read_error).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
-                                    # #endregion
                                     # 读取错误，可能连接已关闭
                                     log_srv(f"SSH读取错误: {read_error}")
                                     break
@@ -3172,20 +3128,12 @@ def handle_start_ssh(data):
                                     if hasattr(ssh_shell, 'exit_status'):
                                         exit_status = ssh_shell.exit_status()
                                         if exit_status is not None:
-                                            # #region agent log
-                                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3217","message":"breaking due to exit_status","data":{"exit_status":exit_status},"timestamp":int(time.time()*1000)}) + '\n')
-                                            # #endregion
                                             log_srv(f"Shell退出状态: {exit_status}，退出读取循环")
                                             break
                                     
                                     # 关键改进：只检查 is_closed()，不检查 is_closing()
                                     # is_closing() 可能返回 True 但连接仍然可用，导致误判
                                     if hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed():
-                                        # #region agent log
-                                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3225","message":"breaking due to is_closed","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                                        # #endregion
                                         log_srv("Shell已关闭，退出读取循环")
                                         break
                                     
@@ -3193,22 +3141,12 @@ def handle_start_ssh(data):
                                     # 如果连接真的有问题，会在下一次 read() 时抛出异常
                                     
                                 except Exception as check_error:
-                                    # #region agent log
-                                    import traceback
-                                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3233","message":"exception in shell state check","data":{"error":str(check_error),"error_type":type(check_error).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
-                                    # #endregion
                                     # 如果检查退出状态失败，继续读取（避免误判）
                                     # 不记录为错误，因为这可能是正常的（例如方法不存在）
                                     pass
                                 
                                 await asyncio.sleep(0.01)
                         except Exception as e:
-                            # #region agent log
-                            import traceback
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"web_ui.py:3225","message":"outer exception in read_ssh_output_async","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
-                            # #endregion
                             try:
                                 socketio.emit('error', {'message': f'SSH读取错误: {str(e)}'}, room=session_id)
                             except:
@@ -3329,13 +3267,6 @@ def handle_terminal_input(data):
     has_newline = '\n' in input_data
     has_carriage_return = '\r' in input_data
     
-    # #region agent log
-    import json as json_log
-    import time
-    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3330","message":"handle_terminal_input entry","data":{"session_id":session_id,"input_data":input_repr,"input_data_type":type(input_data).__name__,"input_data_len":len(input_data) if input_data else 0,"has_newline":has_newline,"has_carriage_return":has_carriage_return},"timestamp":int(time.time()*1000)}) + '\n')
-    # #endregion
-    
     # 记录包含换行符的数据（用于调试回车键问题）
     if has_newline or has_carriage_return:
         log_srv(f"收到前端输入（包含换行符）: {input_repr}")
@@ -3348,31 +3279,10 @@ def handle_terminal_input(data):
             ssh_shell = session.get("ssh_shell")
             if ssh_shell:
                 try:
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3343","message":"before shell state check","data":{"has_is_closing":hasattr(ssh_shell, 'is_closing'),"has_is_closed":hasattr(ssh_shell, 'is_closed')},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
-                    
                     # 检查shell是否已关闭
-                    is_closing = hasattr(ssh_shell, 'is_closing') and ssh_shell.is_closing()
-                    is_closed = hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed()
-                    
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3347","message":"after shell state check","data":{"is_closing":is_closing,"is_closed":is_closed},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
-                    
-                    if is_closing:
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3350","message":"shell is closing, returning early","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
+                    if hasattr(ssh_shell, 'is_closing') and ssh_shell.is_closing():
                         return
-                    if is_closed:
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"web_ui.py:3353","message":"shell is closed, returning early","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
+                    if hasattr(ssh_shell, 'is_closed') and ssh_shell.is_closed():
                         return
                     
                     # ShellWrapper的write()现在是异步方法，需要使用await
@@ -3383,48 +3293,16 @@ def handle_terminal_input(data):
                     # 获取事件循环并异步调用write()
                     loop = session.get("loop") or get_or_create_event_loop()
                     
-                    # #region agent log
-                    import threading
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3360","message":"before write coro creation","data":{"loop_is_running":loop.is_running(),"current_thread":threading.current_thread().name,"loop_thread_id":id(loop)},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
-                    
                     write_coro = ssh_shell.write(input_data)
                     
-                    # #region agent log
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3363","message":"after write coro creation","data":{"is_coroutine":asyncio.iscoroutine(write_coro),"loop_is_running":loop.is_running()},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
-                    
                     if loop.is_running():
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3367","message":"using run_coroutine_threadsafe","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         # 如果事件循环正在运行，使用run_coroutine_threadsafe
                         future = asyncio.run_coroutine_threadsafe(write_coro, loop)
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3370","message":"after run_coroutine_threadsafe","data":{"future_done":future.done()},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                     else:
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3373","message":"using run_until_complete","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         # 如果事件循环未运行，运行直到完成
                         loop.run_until_complete(write_coro)
-                        # #region agent log
-                        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3376","message":"after run_until_complete","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                        # #endregion
                         
                 except Exception as e:
-                    # #region agent log
-                    import traceback
-                    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"web_ui.py:3380","message":"exception in handle_terminal_input","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc(),"input_data":input_repr},"timestamp":int(time.time()*1000)}) + '\n')
-                    # #endregion
                     
                     # 重要：记录详细的错误信息，包括输入数据
                     error_msg = f"SSH写入错误: {e} (输入数据: {input_repr})"
@@ -5907,13 +5785,6 @@ if __name__ == "__main__":
     start_background()
     
     # 检查路由注册
-    # #region agent log
-    import json as json_log
-    ws_routes = [str(rule) for rule in app.url_map.iter_rules() if '/ws/' in str(rule)]
-    with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"web_ui.py:5376","message":"checking routes before server start","data":{"ws_routes":ws_routes,"all_routes_count":len(list(app.url_map.iter_rules()))},"timestamp":int(time.time()*1000)}) + '\n')
-    # #endregion
-    
     # 使用Flask-SocketIO启动服务器
     print(f"Web服务器启动在 http://0.0.0.0:5000 (支持WebSocket via Flask-SocketIO, async_mode={async_mode})")
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

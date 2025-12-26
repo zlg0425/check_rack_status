@@ -110,12 +110,6 @@ class SSHConnectionAdapter:
             asyncssh.Error: SSH连接错误
             ValueError: 配置错误
         """
-        # #region agent log
-        import json
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"ssh_connection_adapter.py:149","message":"create_connection entry","data":{"host":config.host,"port":config.port,"username":config.username,"skip_host_key_check":config.skip_host_key_check,"client_host_keys":config.client_host_keys,"known_hosts":config.known_hosts},"timestamp":int(time.time()*1000)}) + '\n')
-        # #endregion
-        
         if not config.host:
             raise ValueError("host参数不能为空")
         
@@ -144,10 +138,6 @@ class SSHConnectionAdapter:
         try:
             conn = await self._connect(config)
         except Exception as e:
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"ssh_connection_adapter.py:184","message":"create_connection exception","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
             logger.error(f"创建SSH连接失败: {e}")
             raise
         
@@ -174,12 +164,6 @@ class SSHConnectionAdapter:
         """AsyncSSH 2.x 连接实现"""
         logger.debug("使用 AsyncSSH 2.x 连接")
         
-        # #region agent log
-        import json
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"ssh_connection_adapter.py:295","message":"_connect_v2 entry","data":{"host":config.host,"port":config.port,"skip_host_key_check":config.skip_host_key_check,"client_host_keys":config.client_host_keys,"known_hosts":config.known_hosts},"timestamp":int(time.time()*1000)}) + '\n')
-        # #endregion
-        
         # 2.x版本严格要求关键字参数
         conn_params: Dict[str, Any] = {
             'host': config.host,
@@ -204,10 +188,6 @@ class SSHConnectionAdapter:
             # 注意：asyncssh 2.x 中，设置 known_hosts=None 即可跳过验证
             # 不需要设置 client_host_keys
             logger.warning(f"⚠️ 跳过主机密钥验证（仅用于测试环境）: {config.host}:{config.port}")
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"ssh_connection_adapter.py:317","message":"skip_host_key_check branch","data":{"known_hosts":None},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
         elif config.client_host_keys == 'auto' or (config.client_host_keys is None and config.known_hosts):
             # 自动接受首次连接的主机密钥
             # asyncssh 会自动处理：如果 known_hosts 文件不存在或主机不在其中，会自动添加
@@ -221,28 +201,14 @@ class SSHConnectionAdapter:
             # 重要：不设置 client_host_keys 参数，asyncssh 不支持此参数
             # asyncssh 会自动处理 known_hosts 文件（不存在则创建，主机不在则添加）
             logger.info(f"使用自动主机密钥验证: {config.host}:{config.port} (known_hosts={known_hosts_path})")
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"ssh_connection_adapter.py:323","message":"auto mode branch","data":{"known_hosts_path":known_hosts_path,"client_host_keys_value":config.client_host_keys},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
         elif config.known_hosts is not None:
             # 使用指定的 known_hosts 文件
             conn_params['known_hosts'] = config.known_hosts
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"G","location":"ssh_connection_adapter.py:336","message":"known_hosts specified branch","data":{"known_hosts":config.known_hosts},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
         
         # 处理keepalive
         if config.keepalive_interval:
             conn_params['keepalive_interval'] = config.keepalive_interval
             conn_params['keepalive_count_max'] = config.keepalive_count_max
-        
-        # #region agent log
-        with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            conn_params_safe = {k: (str(v) if isinstance(v, (list, dict)) else v) for k, v in conn_params.items()}
-            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H","location":"ssh_connection_adapter.py:345","message":"before asyncssh.connect","data":{"conn_params_keys":list(conn_params.keys()),"conn_params":conn_params_safe,"has_client_host_keys":"client_host_keys" in conn_params},"timestamp":int(time.time()*1000)}) + '\n')
-        # #endregion
         
         # 2.x版本必须使用关键字参数
         try:
@@ -250,10 +216,6 @@ class SSHConnectionAdapter:
             return conn
         except asyncssh.HostKeyNotVerifiable as e:
             # 主机密钥验证失败（使用正确的异常类名称）
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"I","location":"ssh_connection_adapter.py:349","message":"HostKeyNotVerifiable exception","data":{"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
             logger.error(f"主机密钥验证失败: {config.host}:{config.port} - {e}")
             logger.info("提示: 如果这是可信的测试环境，可以设置 skip_host_key_check=True")
             raise
@@ -261,11 +223,6 @@ class SSHConnectionAdapter:
             # 捕获其他SSH错误，检查是否是主机密钥相关问题
             error_msg = str(e).lower()
             error_type = type(e).__name__.lower()
-            
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"J","location":"ssh_connection_adapter.py:356","message":"asyncssh.Error exception","data":{"error":str(e),"error_type":error_type,"error_msg":error_msg},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
             
             # 检查错误消息或类型名称中是否包含主机密钥相关关键词
             host_key_keywords = ['host key', 'hostkey', 'not verified', 'not trusted', 
@@ -282,11 +239,6 @@ class SSHConnectionAdapter:
             # 捕获其他非asyncssh异常
             error_msg = str(e).lower()
             error_type = type(e).__name__
-            
-            # #region agent log
-            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"K","location":"ssh_connection_adapter.py:375","message":"generic Exception","data":{"error":str(e),"error_type":error_type,"error_msg":error_msg},"timestamp":int(time.time()*1000)}) + '\n')
-            # #endregion
             
             if any(keyword in error_msg for keyword in ['host key', 'hostkey', 'not verified', 'not trusted']):
                 logger.error(f"主机密钥验证失败: {config.host}:{config.port} - {e}")
@@ -516,40 +468,16 @@ class SSHConnectionAdapter:
                             Args:
                                 data: 要写入的数据，可以是 str 或 bytes
                             """
-                            # #region agent log
-                            import json as json_log
-                            import time
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:691","message":"ShellWrapper.write entry","data":{"data":repr(data),"data_type":type(data).__name__,"_closed":self._closed},"timestamp":int(time.time()*1000)}) + '\n')
-                            # #endregion
-                            
                             if self._closed:
-                                # #region agent log
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:694","message":"ShellWrapper already closed, returning","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
                                 return
                             
                             # 检查连接状态
                             channel_is_closing = hasattr(self._channel, 'is_closing') and self._channel.is_closing()
                             channel_is_closed = hasattr(self._channel, 'is_closed') and self._channel.is_closed()
                             
-                            # #region agent log
-                            with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:700","message":"channel state check","data":{"channel_is_closing":channel_is_closing,"channel_is_closed":channel_is_closed},"timestamp":int(time.time()*1000)}) + '\n')
-                            # #endregion
-                            
                             if channel_is_closing:
-                                # #region agent log
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:703","message":"channel is closing, returning","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
                                 return
                             if channel_is_closed:
-                                # #region agent log
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:706","message":"channel is closed, marking wrapper closed","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
                                 self._closed = True
                                 return
                             
@@ -576,29 +504,14 @@ class SSHConnectionAdapter:
                                 if '\n' in data or '\r' in data:
                                     logger.debug(f"发送包含换行符的数据: {data_repr}")
                                 
-                                # #region agent log
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"post-fix","hypothesisId":"B","location":"ssh_connection_adapter.py:714","message":"before channel.write","data":{"data":data_repr,"data_type":type(data).__name__,"data_len":len(data) if data else 0,"has_newline":"\\n" in data,"has_carriage_return":"\\r" in data},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
-                                
                                 # 调用 asyncssh 2.x 的 channel.write()
                                 # 注意：根据官方文档，当指定了 encoding 时，write() 是同步方法，返回 None
                                 # 但为了保持统一的异步接口，我们将此方法标记为 async
                                 self._channel.write(data)
                                 
-                                # #region agent log
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:717","message":"after channel.write","data":{},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
-                                
                             except Exception as e:
                                 # 重要：不要直接关闭连接，而是向上抛出异常
                                 # 让调用者（如断开事件处理器）决定如何清理
-                                # #region agent log
-                                import traceback
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:720","message":"exception in ShellWrapper.write","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
                                 
                                 # 检查是否是 SSH 相关错误
                                 if ASYNSSH_AVAILABLE and isinstance(e, asyncssh.Error):
@@ -611,17 +524,6 @@ class SSHConnectionAdapter:
                                 # 标记为关闭状态，但不直接关闭通道（让调用者处理）
                                 self._closed = True
                                 # 向上抛出异常，让调用者决定如何处理
-                                raise
-                            except Exception as e:
-                                # 其他未知异常，记录但不抛出（避免中断调用链）
-                                # #region agent log
-                                import traceback
-                                with open(r'd:\Core\python_pj\other_script\ssh_script\check_rack_status\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json_log.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"ssh_connection_adapter.py:720","message":"unexpected exception in ShellWrapper.write","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(time.time()*1000)}) + '\n')
-                                # #endregion
-                                logger.error(f"写入数据时发生未知异常: {e}")
-                                self._closed = True
-                                # 对于未知异常，也向上抛出
                                 raise
                     
                     def exit_status(self):
