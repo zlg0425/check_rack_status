@@ -3787,6 +3787,7 @@ def index():
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-clipboard@0.9.0/lib/xterm-addon-clipboard.js"></script>
   <!-- Socket.IO 客户端库 (版本4.5.4，兼容Flask-SocketIO 5.x) -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script>
@@ -4728,18 +4729,79 @@ def index():
         cursorBlink: true,
         scrollback: 10000,
         convertEol: true,
+        // 保持原有的右键行为，不强制改变
+        rightClickSelectsWord: true,  // 保持默认行为，允许右键选中单词
       });
       
-      // 加载插件
+      // 加载插件（按正确顺序）
       terminalFitAddon = new FitAddon.FitAddon();
       const webLinksAddon = new WebLinksAddon.WebLinksAddon();
       
+      // 先加载基础插件
       currentTerminal.loadAddon(terminalFitAddon);
       currentTerminal.loadAddon(webLinksAddon);
+      
+      // 初始化剪贴板扩展（支持选中即复制和右键粘贴）
+      // 注意：ClipboardAddon 的行为：
+      // 1. 选中文本时自动复制到系统剪贴板（不影响正常选择行为）
+      // 2. 右键点击时粘贴剪贴板内容（仅在终端内右键时，不影响浏览器右键菜单）
+      // 3. 不会干扰正常的键盘输入（所有键盘输入正常通过 onData 事件）
+      // 4. 不会阻止 Ctrl+C/V 等快捷键的正常功能
+      try {
+        // 检查 ClipboardAddon 是否可用
+        if (typeof ClipboardAddon !== 'undefined' && ClipboardAddon.ClipboardAddon) {
+          const clipboardAddon = new ClipboardAddon.ClipboardAddon();
+          currentTerminal.loadAddon(clipboardAddon);
+        } else {
+          console.warn('ClipboardAddon 不可用，复制粘贴功能将不可用');
+        }
+      } catch (e) {
+        // 如果 ClipboardAddon 加载失败，不影响终端正常使用
+        console.warn('ClipboardAddon 加载失败，复制粘贴功能可能不可用:', e);
+      }
       
       // 打开终端
       currentTerminal.open(terminalContainer);
       terminalFitAddon.fit();
+      
+      // 实现选中即复制功能
+      // 监听文本选择变化，当用户选中文本时自动复制到剪贴板
+      // 注意：复制所有选中的字符，包括空格、特殊字符、中文、英文等
+      currentTerminal.onSelectionChange(() => {
+        if (currentTerminal.hasSelection()) {
+          const selectedText = currentTerminal.getSelection();
+          // 只要选中了文本（包括空格、特殊字符等），就复制
+          if (selectedText && selectedText.length > 0) {
+            // 使用 Clipboard API 复制到系统剪贴板
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(selectedText).catch(err => {
+                // 静默失败，不影响用户体验
+                console.debug('自动复制到剪贴板失败:', err);
+              });
+            } else {
+              // 降级方案：使用传统的 execCommand（兼容旧浏览器）
+              try {
+                const textArea = document.createElement('textarea');
+                textArea.value = selectedText;
+                textArea.style.position = 'fixed';
+                textArea.style.top = '-9999px';
+                textArea.style.left = '-9999px';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                textArea.setSelectionRange(0, selectedText.length);
+                const success = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (!success) {
+                  console.debug('execCommand 复制失败');
+                }
+              } catch (err) {
+                console.debug('降级复制方案失败:', err);
+              }
+            }
+          }
+        }
+      });
       
       // 处理窗口大小变化
       const handleResize = () => {
@@ -4761,6 +4823,11 @@ def index():
       connectTerminalSocketIO(name, ip, port);
       
       // 终端输入转发到SocketIO
+      // 注意：这个事件处理器会接收所有输入，包括：
+      // 1. 键盘输入（正常输入）
+      // 2. ClipboardAddon 粘贴的内容（通过 onData 事件）
+      // 3. 其他输入源
+      // ClipboardAddon 不会干扰这个流程，它只是将粘贴的内容通过 onData 发送
       currentTerminal.onData(data => {
         if (terminalSocket && terminalSocket.connected) {
           terminalSocket.emit('terminal_input', {

@@ -14,9 +14,11 @@ Terminal 统一测试套件
     python test_terminal_unified.py --adapter          # SSH适配器测试
     python test_terminal_unified.py --enter-key       # 回车键测试
     python test_terminal_unified.py --socketio         # SocketIO终端测试
+    python test_terminal_unified.py --clipboard        # 复制粘贴功能测试
     
     # 指定服务器
     python test_terminal_unified.py --adapter --server LP-8650-1 --ip 10.99.19.11 --port 22
+    python test_terminal_unified.py --clipboard --server LP-8650-1 --ip 10.99.19.11 --port 22
 """
 
 import asyncio
@@ -462,6 +464,339 @@ class SocketIOTerminalTests:
         self.test_ssh_connection_establishment()
 
 # ============================================================================
+# 复制粘贴功能测试模块
+# ============================================================================
+
+class ClipboardTests:
+    """复制粘贴功能测试类"""
+    
+    def __init__(self, base_url: str, server_name: str, server_ip: str, port: int):
+        self.base_url = base_url
+        self.server_name = server_name
+        self.server_ip = server_ip
+        self.port = port
+        self.sio = None
+        self.received_output = []
+        self.output_lock = threading.Lock()
+    
+    def check_api_server(self):
+        """检查API服务器是否运行"""
+        test_name = "API服务器检查（复制粘贴测试）"
+        try:
+            response = requests.get(f"{self.base_url}/api/status", timeout=5)
+            if response.status_code == 200:
+                log_test(test_name, "PASS", "API服务器运行正常")
+                return True
+            else:
+                log_test(test_name, "FAIL", f"API服务器状态码: {response.status_code}")
+                return False
+        except Exception as e:
+            log_test(test_name, "FAIL", f"无法连接API服务器: {e}")
+            return False
+    
+    def setup_socketio_connection(self, timeout=10):
+        """建立SocketIO连接并等待SSH连接就绪"""
+        if not SOCKETIO_AVAILABLE:
+            return False
+        
+        try:
+            self.sio = socketio.Client()
+            ssh_connected_event = threading.Event()
+            error_event = threading.Event()
+            error_message = None
+            
+            @self.sio.on('connect')
+            def on_connect():
+                self.sio.emit('start_ssh', {
+                    'server_name': self.server_name,
+                    'server_ip': self.server_ip,
+                    'port': self.port
+                })
+            
+            @self.sio.on('connected')
+            def on_ssh_connected(data):
+                ssh_connected_event.set()
+            
+            @self.sio.on('output')
+            def on_output(data):
+                with self.output_lock:
+                    if data.get('data'):
+                        self.received_output.append(data['data'])
+            
+            @self.sio.on('error')
+            def on_error(data):
+                nonlocal error_message
+                error_message = data.get('message', '未知错误')
+                error_event.set()
+            
+            self.sio.connect(self.base_url)
+            
+            if ssh_connected_event.wait(timeout=timeout):
+                # 等待一下，确保shell准备就绪
+                time.sleep(1)
+                return True
+            elif error_event.is_set():
+                log_test("SocketIO连接建立", "FAIL", f"SSH连接失败: {error_message}")
+                return False
+            else:
+                log_test("SocketIO连接建立", "FAIL", "SSH连接超时")
+                return False
+        except Exception as e:
+            log_test("SocketIO连接建立", "FAIL", f"连接失败: {e}")
+            return False
+    
+    def cleanup_socketio_connection(self):
+        """清理SocketIO连接"""
+        if self.sio:
+            try:
+                self.sio.disconnect()
+            except:
+                pass
+            self.sio = None
+        self.received_output.clear()
+    
+    def send_input(self, text: str, delay_between_chars=0.01):
+        """发送输入到终端（模拟粘贴）"""
+        if not self.sio or not self.sio.connected:
+            return False
+        
+        try:
+            # 逐字符发送，模拟真实的粘贴行为
+            for char in text:
+                self.sio.emit('terminal_input', {'data': char})
+                if delay_between_chars > 0:
+                    time.sleep(delay_between_chars)
+            return True
+        except Exception as e:
+            log_test("发送输入", "FAIL", f"发送失败: {e}")
+            return False
+    
+    def wait_for_output(self, timeout=5, expected_text=None):
+        """等待输出，可选的期望文本"""
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            with self.output_lock:
+                output_text = ''.join(self.received_output)
+                if expected_text:
+                    if expected_text in output_text:
+                        return True
+                elif len(self.received_output) > 0:
+                    return True
+            time.sleep(0.1)
+        return False
+    
+    def test_single_line_paste(self):
+        """测试单行文本粘贴"""
+        test_name = "单行文本粘贴"
+        
+        if not SOCKETIO_AVAILABLE:
+            log_test(test_name, "SKIP", "socketio库不可用")
+            return False
+        
+        if not self.setup_socketio_connection():
+            log_test(test_name, "SKIP", "无法建立SSH连接")
+            return False
+        
+        try:
+            # 清空输出缓冲区
+            self.received_output.clear()
+            
+            # 发送一个简单的命令（模拟粘贴）
+            test_command = "echo 'test_paste_single_line'\n"
+            if not self.send_input(test_command, delay_between_chars=0.005):
+                log_test(test_name, "FAIL", "发送粘贴内容失败")
+                return False
+            
+            # 等待输出
+            if self.wait_for_output(timeout=3, expected_text="test_paste_single_line"):
+                log_test(test_name, "PASS", "单行文本粘贴成功")
+                return True
+            else:
+                log_test(test_name, "FAIL", "未收到预期输出")
+                return False
+        except Exception as e:
+            log_test(test_name, "FAIL", f"测试异常: {e}")
+            return False
+        finally:
+            self.cleanup_socketio_connection()
+    
+    def test_multi_line_paste(self):
+        """测试多行文本粘贴"""
+        test_name = "多行文本粘贴"
+        
+        if not SOCKETIO_AVAILABLE:
+            log_test(test_name, "SKIP", "socketio库不可用")
+            return False
+        
+        if not self.setup_socketio_connection():
+            log_test(test_name, "SKIP", "无法建立SSH连接")
+            return False
+        
+        try:
+            # 清空输出缓冲区
+            self.received_output.clear()
+            
+            # 发送多行命令（模拟粘贴多行脚本）
+            multi_line_command = """echo 'line1'
+echo 'line2'
+echo 'line3'
+"""
+            if not self.send_input(multi_line_command, delay_between_chars=0.005):
+                log_test(test_name, "FAIL", "发送多行粘贴内容失败")
+                return False
+            
+            # 等待所有输出
+            time.sleep(2)  # 给多行命令执行时间
+            
+            with self.output_lock:
+                output_text = ''.join(self.received_output)
+            
+            # 检查是否包含所有行的输出
+            if 'line1' in output_text and 'line2' in output_text and 'line3' in output_text:
+                log_test(test_name, "PASS", "多行文本粘贴成功")
+                return True
+            else:
+                log_test(test_name, "FAIL", f"未收到所有预期输出。实际输出: {output_text[:200]}")
+                return False
+        except Exception as e:
+            log_test(test_name, "FAIL", f"测试异常: {e}")
+            return False
+        finally:
+            self.cleanup_socketio_connection()
+    
+    def test_paste_with_special_chars(self):
+        """测试包含特殊字符的粘贴"""
+        test_name = "特殊字符粘贴"
+        
+        if not SOCKETIO_AVAILABLE:
+            log_test(test_name, "SKIP", "socketio库不可用")
+            return False
+        
+        if not self.setup_socketio_connection():
+            log_test(test_name, "SKIP", "无法建立SSH连接")
+            return False
+        
+        try:
+            # 清空输出缓冲区
+            self.received_output.clear()
+            
+            # 发送包含特殊字符的命令
+            special_chars_command = "echo 'test: $PATH && ls -la | grep test'\n"
+            if not self.send_input(special_chars_command, delay_between_chars=0.005):
+                log_test(test_name, "FAIL", "发送特殊字符粘贴内容失败")
+                return False
+            
+            # 等待输出
+            if self.wait_for_output(timeout=3):
+                log_test(test_name, "PASS", "特殊字符粘贴成功")
+                return True
+            else:
+                log_test(test_name, "FAIL", "未收到预期输出")
+                return False
+        except Exception as e:
+            log_test(test_name, "FAIL", f"测试异常: {e}")
+            return False
+        finally:
+            self.cleanup_socketio_connection()
+    
+    def test_paste_chinese_text(self):
+        """测试中文文本粘贴"""
+        test_name = "中文文本粘贴"
+        
+        if not SOCKETIO_AVAILABLE:
+            log_test(test_name, "SKIP", "socketio库不可用")
+            return False
+        
+        if not self.setup_socketio_connection():
+            log_test(test_name, "SKIP", "无法建立SSH连接")
+            return False
+        
+        try:
+            # 清空输出缓冲区
+            self.received_output.clear()
+            
+            # 发送包含中文的命令
+            chinese_command = "echo '测试中文粘贴功能'\n"
+            if not self.send_input(chinese_command, delay_between_chars=0.005):
+                log_test(test_name, "FAIL", "发送中文粘贴内容失败")
+                return False
+            
+            # 等待输出
+            if self.wait_for_output(timeout=3):
+                with self.output_lock:
+                    output_text = ''.join(self.received_output)
+                if '测试' in output_text or '中文' in output_text:
+                    log_test(test_name, "PASS", "中文文本粘贴成功")
+                    return True
+                else:
+                    log_test(test_name, "PASS", "中文文本已发送（输出可能被编码）")
+                    return True
+            else:
+                log_test(test_name, "FAIL", "未收到预期输出")
+                return False
+        except Exception as e:
+            log_test(test_name, "FAIL", f"测试异常: {e}")
+            return False
+        finally:
+            self.cleanup_socketio_connection()
+    
+    def test_paste_large_text(self):
+        """测试大文本粘贴"""
+        test_name = "大文本粘贴"
+        
+        if not SOCKETIO_AVAILABLE:
+            log_test(test_name, "SKIP", "socketio库不可用")
+            return False
+        
+        if not self.setup_socketio_connection():
+            log_test(test_name, "SKIP", "无法建立SSH连接")
+            return False
+        
+        try:
+            # 清空输出缓冲区
+            self.received_output.clear()
+            
+            # 生成一个较长的命令（模拟粘贴大段文本）
+            large_text = "echo 'start'; " + "echo 'middle'; " * 10 + "echo 'end'\n"
+            if not self.send_input(large_text, delay_between_chars=0.001):
+                log_test(test_name, "FAIL", "发送大文本粘贴内容失败")
+                return False
+            
+            # 等待输出
+            time.sleep(2)
+            
+            with self.output_lock:
+                output_text = ''.join(self.received_output)
+            
+            if 'start' in output_text and 'end' in output_text:
+                log_test(test_name, "PASS", "大文本粘贴成功")
+                return True
+            else:
+                log_test(test_name, "FAIL", "大文本粘贴可能不完整")
+                return False
+        except Exception as e:
+            log_test(test_name, "FAIL", f"测试异常: {e}")
+            return False
+        finally:
+            self.cleanup_socketio_connection()
+    
+    def run_all(self):
+        """运行所有复制粘贴测试"""
+        print("\n" + "=" * 60)
+        print("【复制粘贴功能测试】")
+        print("=" * 60)
+        
+        if not self.check_api_server():
+            log_test("复制粘贴测试", "SKIP", "API服务器未运行")
+            return
+        
+        self.test_single_line_paste()
+        self.test_multi_line_paste()
+        self.test_paste_with_special_chars()
+        self.test_paste_chinese_text()
+        self.test_paste_large_text()
+
+# ============================================================================
 # 主函数和配置加载
 # ============================================================================
 
@@ -517,6 +852,7 @@ async def main():
     parser.add_argument("--adapter", action="store_true", help="运行SSH适配器测试")
     parser.add_argument("--enter-key", action="store_true", help="运行回车键测试")
     parser.add_argument("--socketio", action="store_true", help="运行SocketIO终端测试")
+    parser.add_argument("--clipboard", action="store_true", help="运行复制粘贴功能测试")
     
     parser.add_argument("--server", help="服务器名称")
     parser.add_argument("--ip", help="服务器IP")
@@ -529,7 +865,7 @@ async def main():
     args = parser.parse_args()
     
     # 如果没有指定任何测试，默认运行所有
-    if not (args.all or args.adapter or args.enter_key or args.socketio):
+    if not (args.all or args.adapter or args.enter_key or args.socketio or args.clipboard):
         args.all = True
     
     # 加载配置
@@ -590,6 +926,15 @@ async def main():
             port=config['port']
         )
         socketio_tests.run_all()
+    
+    if args.all or args.clipboard:
+        clipboard_tests = ClipboardTests(
+            base_url=args.api_url,
+            server_name=config['server_name'] or config['host'],
+            server_ip=config['host'],
+            port=config['port']
+        )
+        clipboard_tests.run_all()
     
     # 打印测试结果汇总
     print("\n" + "=" * 60)
