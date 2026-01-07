@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>杭州办公室台架服务器监控</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+  <header>
+    <h2>杭州办公室台架服务器监控面板</h2>
+    <div class="meta" id="updatedAt">加载中...</div>
+  </header>
+  <div class="container">
+    <div class="card">
+      <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+        <button class="btn" onclick="openBatchFota()" style="background: #3b82f6; color: #fff; border: none;">批量FOTA操作</button>
+        <button class="btn" onclick="openBatchUpload()" style="background: #10b981; color: #fff; border: none; margin-left: 8px;">批量上传</button>
+        <span id="selectedCount" style="color: var(--muted); font-size: 13px;">已选择: 0</span>
+      </div>
+      <div id="errorBox" class="error"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-checkbox"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+              <th class="col-status">状态</th>
+              <th class="col-name">名称</th>
+              <th class="col-ip">IP</th>
+              <th>智驾域(22)</th>
+              <th>智驾域SSH</th>
+              <th>智驾域详情</th>
+              <th>座舱域(9999)</th>
+              <th>座舱域SSH</th>
+              <th>座舱域详情</th>
+              <th>智驾域版本</th>
+              <th>座舱域版本</th>
+              <th>上传</th>
+              <th>FOTA</th>
+              <th>远程连接</th>
+              <th>时间</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="uploadModal">
+    <div class="modal">
+      <h3>上传文件</h3>
+      <div>服务器：<span id="uploadServer"></span></div>
+      <div>端口：<span id="uploadPort"></span></div>
+      <label>目标目录</label>
+      <input type="text" id="targetDir" placeholder="例如 /tmp">
+      <label style="margin-top:8px;">选择文件或文件夹</label>
+      <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+        <input type="file" id="fileInput" multiple style="flex: 1;" onchange="updateSelectedFiles()">
+        <input type="file" id="folderInput" webkitdirectory style="flex: 1; display: none;" onchange="updateSelectedFiles()">
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+        <button class="btn" onclick="switchUploadMode('file')" id="fileModeBtn" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 6px;">多文件</button>
+        <button class="btn" onclick="switchUploadMode('folder')" id="folderModeBtn" style="flex: 1; background: #6b7280; color: #fff; border: none; padding: 6px;">文件夹</button>
+      </div>
+      <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+        提示：多文件模式可选择多个文件，文件夹模式保持目录结构。
+      </div>
+      <div id="selectedFilesList" style="margin-top: 8px; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; display: none;">
+        <div style="font-size: 13px; color: #374151; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 4px; height: 16px; background: #3b82f6; border-radius: 2px;"></span>
+          已选择文件 (<span id="selectedFilesCount" style="color: #3b82f6; font-weight: 700;">0</span>)
+        </div>
+        <div id="selectedFilesContent" style="font-size: 12px; color: #374151;"></div>
+      </div>
+      <style>
+        #selectedFilesList::-webkit-scrollbar {
+          width: 8px;
+        }
+        #selectedFilesList::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        #selectedFilesList::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        #selectedFilesList::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        .file-item {
+          padding: 6px 8px;
+          margin: 2px 0;
+          border-radius: 4px;
+          background: #ffffff;
+          border-left: 3px solid #e5e7eb;
+          transition: all 0.2s;
+        }
+        .file-item:hover {
+          background: #f8fafc;
+          border-left-color: #3b82f6;
+        }
+        .file-item-folder {
+          border-left-color: #10b981;
+        }
+        .file-item-folder:hover {
+          border-left-color: #059669;
+        }
+        .file-name {
+          color: #1f2937;
+          font-weight: 500;
+          word-break: break-all;
+        }
+        .file-path {
+          color: #4b5563;
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-size: 11px;
+          word-break: break-all;
+          margin-top: 2px;
+        }
+        .file-size {
+          color: #6b7280;
+          font-size: 11px;
+          margin-left: 8px;
+        }
+        .file-icon {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          margin-right: 6px;
+          vertical-align: middle;
+        }
+      </style>
+      <div class="progress" id="uploadProgress"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeUpload()">取消</button>
+        <button class="btn" onclick="uploadFile()">上传</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="fotaModal">
+    <div class="modal">
+      <h3>FOTA 升级</h3>
+      <div>服务器：<span id="fotaServer"></span></div>
+      <div>目标目录：<span id="fotaTargetText"></span></div>
+      <label style="margin-top:8px;">选择升级包</label>
+      <input type="file" id="fotaFile" accept=".icsw,.bin">
+      <!-- 新增：端口检测提示 -->
+      <div id="fotaPortHint" style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+        请选择文件，系统将自动检测端口并验证文件匹配
+      </div>
+      <div class="progress" id="fotaProgress"></div>
+      <div class="progress" id="fotaStep" style="margin-top:4px;"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeFota()">取消</button>
+        <button class="btn" id="fotaStartBtn" onclick="startFota()">升级</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量FOTA错误提示弹窗 -->
+  <div class="modal-backdrop" id="batchFotaErrorModal" style="display: none;">
+    <div class="modal" style="width: 400px;">
+      <h3 style="color: #ef4444;">批量FOTA错误</h3>
+      <div id="batchFotaErrorMessage" style="margin: 16px 0; color: var(--text); line-height: 1.6;"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeBatchFotaError()" style="background: #3b82f6; color: #fff; border: none;">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="batchFotaModal">
+    <div class="modal" style="width: 500px;">
+      <h3>批量FOTA 升级</h3>
+      <div style="margin-bottom: 8px; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 4px;">已选择服务器 (<span id="batchServerCount">0</span>):</div>
+        <div id="batchServerList" style="font-size: 12px; color: var(--text);"></div>
+      </div>
+      <div>目标目录：<span id="batchFotaTargetText"></span></div>
+      <label style="margin-top:8px;">选择升级包</label>
+      <input type="file" id="batchFotaFile" accept=".icsw,.bin">
+      <!-- 新增：端口检测提示 -->
+      <div id="batchFotaPortHint" style="margin-top: 8px; font-size: 12px; color: #6b7280;"></div>
+      <div class="progress" id="batchFotaProgress"></div>
+      <div class="progress" id="batchFotaStep" style="margin-top:4px;"></div>
+      <div style="margin-top: 12px; max-height: 300px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 4px;">任务进度:</div>
+        <div id="batchFotaTasks" style="font-size: 12px;"></div>
+      </div>
+      <div id="batchFotaTaskDetails" style="margin-top: 8px; display: none;"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeBatchFota()">关闭</button>
+        <button class="btn" id="batchFotaCancelBtn" onclick="cancelBatchFota()" style="background: #ef4444; color: #fff; border: none; display: none;">终止</button>
+        <button class="btn" id="batchFotaStartBtn" onclick="startBatchFota()" style="background: #3b82f6; color: #fff; border: none;">批量升级</button>
+      </div>
+      <!-- 新增：端口检测提示 -->
+      <div id="batchFotaPortHint" style="margin-top: 8px; font-size: 12px; color: #6b7280;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="downloadModal">
+    <div class="modal">
+      <h3>下载文件</h3>
+      <div>服务器：<span id="downloadServer"></span></div>
+      <div>端口：<span id="downloadPort"></span></div>
+      <label>远程文件路径</label>
+      <input type="text" id="remotePath" placeholder="例如 /opt/data/fota/file.bin">
+      <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+        提示：文件夹将自动打包成ZIP文件下载，点击下载后会弹出"另存为"对话框
+      </div>
+      <div class="progress" id="downloadProgress" style="margin-top:8px;"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeDownload()">取消</button>
+        <button class="btn" onclick="downloadFile()">下载</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 网页Terminal弹窗 -->
+  <div class="modal-backdrop" id="terminalModal" style="display: none;">
+    <div class="modal" style="width: 90%; max-width: 1200px; height: 90%; max-height: 800px; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0;">远程终端 - <span id="terminalServerInfo"></span></h3>
+        <div>
+          <button class="btn" onclick="terminalClear()" style="background: #6b7280; color: #fff; border: none; margin-right: 8px;">清屏</button>
+          <button class="btn" onclick="closeTerminal()" style="background: #ef4444; color: #fff; border: none;">关闭</button>
+        </div>
+      </div>
+      <div id="terminalContainer" style="flex: 1; background: #1e1e1e; border-radius: 8px; padding: 12px; overflow: hidden; min-height: 400px;"></div>
+      <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+        <span id="terminalStatus">连接中...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="batchUploadModal">
+    <div class="modal" style="width: 500px;">
+      <h3>批量上传文件</h3>
+      <div style="margin-bottom: 8px; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 4px;">已选择服务器 (<span id="batchUploadServerCount">0</span>):</div>
+        <div id="batchUploadServerList" style="font-size: 12px; color: var(--text);"></div>
+      </div>
+      <label>目标目录</label>
+      <input type="text" id="batchUploadTargetDir" placeholder="例如 /tmp">
+      <label style="margin-top:8px;">选择文件（可多选）</label>
+      <input type="file" id="batchUploadFiles" multiple>
+      <div class="progress" id="batchUploadProgress"></div>
+      <div style="margin-top: 12px; max-height: 300px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px;">
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 4px;">任务进度:</div>
+        <div id="batchUploadTasks" style="font-size: 12px;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeBatchUpload()">关闭</button>
+        <button class="btn" id="batchUploadCancelBtn" onclick="cancelBatchUpload()" style="background: #ef4444; color: #fff; border: none; display: none;">终止</button>
+        <button class="btn" id="batchUploadStart22Btn" onclick="startBatchUpload(22)" style="background: #3b82f6; color: #fff; border: none;">22端口上传</button>
+        <button class="btn" id="batchUploadStart9999Btn" onclick="startBatchUpload(9999)" style="background: #3b82f6; color: #fff; border: none;">9999端口上传</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- xterm.js 库 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-clipboard@0.9.0/lib/xterm-addon-clipboard.js"></script>
+  <!-- Socket.IO 客户端库 (版本4.5.4，兼容Flask-SocketIO 5.x) -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // SocketIO配置：确保使用WebSocket传输
+    if (typeof io !== 'undefined') {
+      // 配置SocketIO使用WebSocket传输
+      window.socketioConfig = {
+        transports: ['websocket', 'polling'],
+        upgrade: true,
+        rememberUpgrade: true
+      };
+    }
+  </script>
+
+  <script>
+    // 注入服务器端变量到 JavaScript
+    window.SSH_USER = "{{ ssh_user }}";
+  </script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
