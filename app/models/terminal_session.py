@@ -53,31 +53,6 @@ class EnhancedTerminalSessionManager:
         import json
         import time as time_module
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": session_id,
-                    "runId": "run1",
-                    "hypothesisId": "SESSION_CREATE",
-                    "location": "app/models/terminal_session.py:create_session:start",
-                    "message": "开始创建增强会话",
-                    "data": {
-                        "session_id": session_id,
-                        "server_name": server_name,
-                        "server_ip": server_ip,
-                        "port": port,
-                        "has_adapter": adapter is not None,
-                        "has_conn": conn is not None,
-                        "has_shell": shell is not None,
-                        "has_loop": loop is not None,
-                        "session_exists": session_id in self._base._tasks
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         # 获取当前事件循环的锁（延迟初始化）
         # 注意：Python 3.10+ 中 asyncio.Lock() 不再接受 loop 参数
@@ -96,58 +71,9 @@ class EnhancedTerminalSessionManager:
         async with lock:
             # 如果会话已存在，先关闭旧会话
             if session_id in self._base._tasks:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": session_id,
-                            "runId": "run1",
-                            "hypothesisId": "SESSION_CREATE",
-                            "location": "app/models/terminal_session.py:create_session:close_existing",
-                            "message": "关闭已存在的会话",
-                            "data": {"session_id": session_id},
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 try:
                     await self.close_session(session_id, loop=loop)
-                    # #region agent log
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": session_id,
-                                "runId": "run1",
-                                "hypothesisId": "SESSION_CREATE",
-                                "location": "app/models/terminal_session.py:create_session:close_existing_complete",
-                                "message": "关闭已存在会话完成",
-                                "data": {"session_id": session_id},
-                                "timestamp": int(time_module.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                 except Exception as close_err:
-                    # #region agent log
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": session_id,
-                                "runId": "run1",
-                                "hypothesisId": "SESSION_CREATE",
-                                "location": "app/models/terminal_session.py:create_session:close_existing_error",
-                                "message": "关闭已存在会话失败",
-                                "data": {
-                                    "session_id": session_id,
-                                    "error": str(close_err),
-                                    "error_type": type(close_err).__name__
-                                },
-                                "timestamp": int(time_module.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                     logger.warning(f"[{session_id}] 关闭已存在会话失败: {close_err}")
                     # 继续执行，即使关闭失败
             
@@ -164,52 +90,7 @@ class EnhancedTerminalSessionManager:
                 loop=loop
             )
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "SESSION_CREATE",
-                        "location": "app/models/terminal_session.py:create_session:after_add",
-                        "message": "会话已添加到基础管理器",
-                        "data": {
-                            "session_id": session_id,
-                            "session_in_base": session_id in self._base._tasks,
-                            "session_data": {
-                                "has_adapter": session_id in self._base._tasks and self._base._tasks[session_id].get("adapter") is not None,
-                                "has_conn": session_id in self._base._tasks and self._base._tasks[session_id].get("ssh_conn") is not None,
-                                "has_shell": session_id in self._base._tasks and self._base._tasks[session_id].get("ssh_shell") is not None,
-                                "has_loop": session_id in self._base._tasks and self._base._tasks[session_id].get("loop") is not None
-                            }
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "SESSION_CREATE",
-                        "location": "app/models/terminal_session.py:create_session:complete",
-                        "message": "增强会话创建完成",
-                        "data": {
-                            "session_id": session_id,
-                            "server_name": server_name,
-                            "server_ip": server_ip,
-                            "port": port,
-                            "session_in_base": session_id in self._base._tasks
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             logger.info(f"终端会话创建成功: {session_id} -> {server_ip}:{port}")
             return True
@@ -223,66 +104,15 @@ class EnhancedTerminalSessionManager:
         """
         import json
         import time
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": session_id,
-                    "runId": "run1",
-                    "hypothesisId": "INPUT",
-                    "location": "app/models/terminal_session.py:write_to_session:start",
-                    "message": "准备写入数据到SSH shell",
-                    "data": {
-                        "session_id": session_id,
-                        "data_length": len(data) if data else 0,
-                        "data_preview": repr(data[:50]) if data else None,
-                        "has_newline": '\n' in (data or ''),
-                        "has_carriage_return": '\r' in (data or '')
-                    },
-                    "timestamp": int(time.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         session = self._base.get_session(session_id)
         if not session:
             logger.warning(f"会话不存在: {session_id}")
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "INPUT",
-                        "location": "app/models/terminal_session.py:write_to_session:no_session",
-                        "message": "会话不存在，无法写入",
-                        "data": {"session_id": session_id},
-                        "timestamp": int(time.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             return
         
         shell = session.get('ssh_shell')
         if not shell:
             logger.warning(f"Shell不存在: {session_id}")
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "INPUT",
-                        "location": "app/models/terminal_session.py:write_to_session:no_shell",
-                        "message": "Shell不存在，无法写入",
-                        "data": {"session_id": session_id},
-                        "timestamp": int(time.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             return
         
         try:
@@ -299,49 +129,10 @@ class EnhancedTerminalSessionManager:
                     # 普通文本，添加换行符
                     data += '\n'
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "INPUT",
-                        "location": "app/models/terminal_session.py:write_to_session:before_write",
-                        "message": "准备调用shell.write",
-                        "data": {
-                            "session_id": session_id,
-                            "original_data_length": len(original_data) if original_data else 0,
-                            "final_data_length": len(data) if data else 0,
-                            "data_changed": original_data != data,
-                            "final_data_preview": repr(data[:50]) if data else None
-                        },
-                        "timestamp": int(time.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             # 异步写入数据
             await shell.write(data)
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "INPUT",
-                        "location": "app/models/terminal_session.py:write_to_session:after_write",
-                        "message": "shell.write调用完成",
-                        "data": {
-                            "session_id": session_id,
-                            "data_length": len(data) if data else 0
-                        },
-                        "timestamp": int(time.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             # 更新会话活动时间
             self._base.update_session_activity(session_id)

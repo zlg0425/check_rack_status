@@ -126,3 +126,139 @@
 [2025-12-29 13:20:58] Shell已关闭，退出读取循环
 [2025-12-29 13:20:58] [-xoZjGqdB1ByGozKAAAB] SSH连接已关闭
 [2025-12-29 13:20:58] [-xoZjGqdB1ByGozKAAAB] 会话已从字典中移除
+[2026-01-07 19:51:28] [HOgXoNqRovmEt4RiAAAB] 终端连接建立
+[2026-01-07 19:51:30] 终端断开连接: HOgXoNqRovmEt4RiAAAB
+[2026-01-07 19:51:30] [q-dMQiq8YxkXta6wAAAD] 终端连接建立
+[2026-01-07 19:51:33] 终端断开连接: q-dMQiq8YxkXta6wAAAD
+[2026-01-07 19:51:39] [S-kgZ3STx-YpGcyEAAAF] 终端连接建立
+[2026-01-07 19:51:40] 终端断开连接: S-kgZ3STx-YpGcyEAAAF
+[2026-01-07 19:56:02] [ZELhUBqk9huIYSQzAAAH] 终端连接建立
+[2026-01-07 19:56:11] 终端断开连接: ZELhUBqk9huIYSQzAAAH
+[2026-01-07 19:56:12] [f3uCayQj1H_7PcrhAAAJ] 终端连接建立
+[2026-01-07 19:56:16] 终端断开连接: f3uCayQj1H_7PcrhAAAJ
+[2026-01-08 10:17:57] 端口检测异常: name 'detect_fota_port' is not defined
+[2026-01-08 10:21:42] [kN-rA8K9K1cSzLPsAAAB] 终端连接建立
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] SSH连接建立成功: 10.99.19.11:22
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] Shell创建成功
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] 准备启动SSH输出读取任务
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] SSH输出读取任务已启动
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] 事件循环线程开始运行
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_START: 开始SSH输出读取循环
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_DATA: 读取到数据长度=9, 类型=str
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_DATA: 读取到数据长度=9, 类型=str
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_DATA: 读取到数据长度=12, 类型=str
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_DATA: 读取到数据长度=11, 类型=str
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_DATA: 读取到数据长度=27, 类型=str
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] READ_DATA: 读取到数据长度=2, 类型=str
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:43] 终端断开连接: kN-rA8K9K1cSzLPsAAAB
+[2026-01-08 10:21:43] Shell已关闭，退出读取循环
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] SSH连接已关闭
+[2026-01-08 10:21:43] [kN-rA8K9K1cSzLPsAAAB] 会话已从字典中移除
+[2026-01-08 10:21:44] [AED1F1eSO2zkNRykAAAD] 终端连接建立
+[2026-01-08 10:21:44] [AED1F1eSO2zkNRykAAAD] SSH连接建立成功: 10.99.19.11:9999
+[2026-01-08 10:21:45] 终端断开连接: AED1F1eSO2zkNRykAAAD
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] Shell创建成功
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] 准备启动SSH输出读取任务
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] SSH输出读取任务已启动
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] 事件循环线程开始运行
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_START: 开始SSH输出读取循环
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=4, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=6, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=6, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=7, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=7, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=38, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] READ_DATA: 读取到数据长度=2, 类型=str
+[2026-01-08 10:21:45] [AED1F1eSO2zkNRykAAAD] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:27] [kUWVHURciuQD8QfsAAAF] 终端连接建立
+[2026-01-08 10:25:27] [kUWVHURciuQD8QfsAAAF] SSH连接建立成功: 10.99.19.11:9999
+[2026-01-08 10:25:28] [kUWVHURciuQD8QfsAAAF] Shell创建成功
+[2026-01-08 10:25:28] [kUWVHURciuQD8QfsAAAF] 准备启动SSH输出读取任务
+[2026-01-08 10:25:28] 终端断开连接: kUWVHURciuQD8QfsAAAF
+[2026-01-08 10:25:28] [kUWVHURciuQD8QfsAAAF] SSH输出读取任务已启动
+[2026-01-08 10:25:28] [kUWVHURciuQD8QfsAAAF] READ_START: 开始SSH输出读取循环
+[2026-01-08 10:25:28] Shell已关闭，退出读取循环
+[2026-01-08 10:25:28] [kUWVHURciuQD8QfsAAAF] SSH连接已关闭
+[2026-01-08 10:25:28] [kUWVHURciuQD8QfsAAAF] 会话已从字典中移除
+[2026-01-08 10:25:40] [Fcdo9QyDdb77yOVZAAAH] 终端连接建立
+[2026-01-08 10:25:40] [Fcdo9QyDdb77yOVZAAAH] SSH连接建立成功: 10.99.19.1:22
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] Shell创建成功
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] 准备启动SSH输出读取任务
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] SSH输出读取任务已启动
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] 事件循环线程开始运行
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] READ_START: 开始SSH输出读取循环
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] READ_DATA: 读取到数据长度=2, 类型=str
+[2026-01-08 10:25:41] [Fcdo9QyDdb77yOVZAAAH] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:43] 终端断开连接: Fcdo9QyDdb77yOVZAAAH
+[2026-01-08 10:25:43] [Fcdo9QyDdb77yOVZAAAH] SSH连接已关闭
+[2026-01-08 10:25:43] [Fcdo9QyDdb77yOVZAAAH] 会话已从字典中移除
+[2026-01-08 10:25:43] Shell已关闭，退出读取循环
+[2026-01-08 10:25:44] [zZZCdGdyt5IjkwtcAAAJ] 终端连接建立
+[2026-01-08 10:25:44] [zZZCdGdyt5IjkwtcAAAJ] SSH连接建立成功: 10.99.19.13:9999
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] Shell创建成功
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] 准备启动SSH输出读取任务
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] SSH输出读取任务已启动
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] 事件循环线程开始运行
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_START: 开始SSH输出读取循环
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=6, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=4, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=9, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=11, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=36, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=2, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] READ_DATA: 读取到数据长度=2, 类型=str
+[2026-01-08 10:25:45] [zZZCdGdyt5IjkwtcAAAJ] OUTPUT_SENT: 已发送output事件
+[2026-01-08 10:25:46] 终端断开连接: zZZCdGdyt5IjkwtcAAAJ
+[2026-01-08 10:25:46] Shell已关闭，退出读取循环
+[2026-01-08 10:25:46] [zZZCdGdyt5IjkwtcAAAJ] SSH连接已关闭
+[2026-01-08 10:25:46] [zZZCdGdyt5IjkwtcAAAJ] 会话已从字典中移除
+[2026-01-08 11:13:20] Shell已关闭，退出读取循环
+[2026-01-10 18:50:21] [M4TnF38IICMyYcm7AAAB] /terminal 连接建立
+[2026-01-10 18:51:47] [M4TnF38IICMyYcm7AAAB] /terminal 断开连接
+[2026-01-10 18:51:48] [8MqwzV_bhQfJnzg3AAAD] /terminal 连接建立
+[2026-01-10 18:53:14] [Ep2eIkg0IrX8ZhgwAAAF] /terminal 连接建立
+[2026-01-10 18:53:15] [8MqwzV_bhQfJnzg3AAAD] /terminal 断开连接
+[2026-01-10 19:00:51] [S__ppizDnhTCxFuwAAAB] /terminal 连接建立
+[2026-01-10 19:02:18] [S__ppizDnhTCxFuwAAAB] /terminal 断开连接
+[2026-01-10 19:02:18] [JFM2FPqbLFgcbHDSAAAD] /terminal 连接建立
+[2026-01-10 19:03:22] [kJx3Ab5Q9uomghydAAAB] /terminal 连接建立
+[2026-01-10 19:04:47] [kJx3Ab5Q9uomghydAAAB] /terminal 断开连接
+[2026-01-10 19:04:48] [mrvI-9DgNR2Xoj5KAAAD] /terminal 连接建立
+[2026-01-12 11:16:48] [U_K7Z6PvDSY31m3CAAAB] /terminal 连接建立
+[2026-01-12 11:18:13] [U_K7Z6PvDSY31m3CAAAB] /terminal 断开连接
+[2026-01-12 11:18:14] [ahRszJnk0L327jPyAAAD] /terminal 连接建立
+[2026-01-12 11:19:39] [ahRszJnk0L327jPyAAAD] /terminal 断开连接
+[2026-01-12 11:19:40] [b7doBBBHCr-2I1QdAAAF] /terminal 连接建立
+[2026-01-12 11:21:05] [b7doBBBHCr-2I1QdAAAF] /terminal 断开连接
+[2026-01-12 11:21:07] [6xT5X8_K7ZpDM7MOAAAH] /terminal 连接建立
+[2026-01-12 11:22:32] [6xT5X8_K7ZpDM7MOAAAH] /terminal 断开连接
+[2026-01-12 11:22:33] [rKvGinTnh67MA34sAAAJ] /terminal 连接建立
+[2026-01-12 11:23:58] [rKvGinTnh67MA34sAAAJ] /terminal 断开连接
+[2026-01-12 11:24:00] [kI9mNd53eIGnQ_T8AAAL] /terminal 连接建立
+[2026-01-12 11:25:25] [kI9mNd53eIGnQ_T8AAAL] /terminal 断开连接
+[2026-01-12 11:25:27] [c76c0fK0Q-5ineymAAAN] /terminal 连接建立
+[2026-01-12 11:26:53] [3TKzSn4h-IGFkSHxAAAP] /terminal 连接建立
+[2026-01-12 11:26:55] [c76c0fK0Q-5ineymAAAN] /terminal 断开连接
+[2026-01-12 11:28:18] [3TKzSn4h-IGFkSHxAAAP] /terminal 断开连接
+[2026-01-12 11:28:19] [CK7r0kb-sKJbfqP-AAAR] /terminal 连接建立
+[2026-01-12 11:29:44] [CK7r0kb-sKJbfqP-AAAR] /terminal 断开连接
+[2026-01-12 11:29:46] [u4kDUghLkPQL5bJVAAAT] /terminal 连接建立
+[2026-01-12 11:31:01] [u4kDUghLkPQL5bJVAAAT] /terminal 断开连接

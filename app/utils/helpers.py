@@ -813,9 +813,59 @@ def create_md5_calculating_stream(stream, server_name: str = None, file_size: in
     return MD5CalculatingStream(stream, server_name, file_size)
 
 
+# 兼容旧接口的惰性导入包装，避免循环依赖（core.sftp.operations / core.fota <-> helpers）
+def _lazy_sftp_upload(*args, **kwargs):
+    from core.sftp.operations import sftp_upload as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_ensure_remote_dir(*args, **kwargs):
+    from core.sftp.operations import ensure_remote_dir as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_validate_remote_path(*args, **kwargs):
+    from core.sftp.operations import validate_remote_path as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_check_remote_disk_space(*args, **kwargs):
+    from core.sftp.operations import check_remote_disk_space as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_check_remote_file_exists(*args, **kwargs):
+    from core.sftp.operations import check_remote_file_exists as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_detect_fota_port(*args, **kwargs):
+    from core.fota import detect_fota_port as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_record_fota_timing(*args, **kwargs):
+    from core.fota import record_fota_timing as _impl
+    return _impl(*args, **kwargs)
+
+
+def _lazy_get_avg_fota_timing(*args, **kwargs):
+    from core.fota import get_avg_fota_timing as _impl
+    return _impl(*args, **kwargs)
+
+
 # 所有函数已迁移完成，不再需要从 check_rack_status 导入
 
 __all__ = [
+    'create_transport',
+    'sftp_upload',
+    'ensure_remote_dir',
+    'validate_remote_path',
+    'check_remote_disk_space',
+    'check_remote_file_exists',
+    'detect_fota_port',
+    'record_fota_timing',
+    'get_avg_fota_timing',
     'md5_bytes',
     'md5_bytes_sampled',
     'md5_stream',
@@ -837,3 +887,13 @@ __all__ = [
     # 注意：remote_md5, remote_exists, remote_remove 在 core/sftp/operations.py 中
     'run_ucm_with_log',
 ]
+
+# 将兼容名称绑定到惰性包装函数
+sftp_upload = _lazy_sftp_upload
+ensure_remote_dir = _lazy_ensure_remote_dir
+validate_remote_path = _lazy_validate_remote_path
+check_remote_disk_space = _lazy_check_remote_disk_space
+check_remote_file_exists = _lazy_check_remote_file_exists
+detect_fota_port = _lazy_detect_fota_port
+record_fota_timing = _lazy_record_fota_timing
+get_avg_fota_timing = _lazy_get_avg_fota_timing

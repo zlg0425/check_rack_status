@@ -8,7 +8,8 @@
 
 import argparse
 
-from check_rack_status import load_config, run_ucm_with_log
+from app.utils.config import load_config
+from app.utils.helpers import run_ucm_with_log
 
 
 def main():

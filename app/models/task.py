@@ -228,33 +228,6 @@ class TerminalSessionManager(TaskManager):
             port: 端口
             loop: 事件循环（可选）
         """
-        # #region agent log
-        import json
-        import time as time_module
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": session_id,
-                    "runId": "run1",
-                    "hypothesisId": "SESSION_ADD",
-                    "location": "app/models/task.py:add_session:start",
-                    "message": "开始添加会话到基础管理器",
-                    "data": {
-                        "session_id": session_id,
-                        "server_name": server_name,
-                        "server_ip": server_ip,
-                        "port": port,
-                        "has_adapter": adapter is not None,
-                        "has_conn": conn is not None,
-                        "has_shell": shell is not None,
-                        "has_loop": loop is not None,
-                        "session_exists": session_id in self._tasks
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         with self._lock:
             self._tasks[session_id] = {
@@ -272,26 +245,6 @@ class TerminalSessionManager(TaskManager):
                 "last_activity": time.time()
             }
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": session_id,
-                        "runId": "run1",
-                        "hypothesisId": "SESSION_ADD",
-                        "location": "app/models/task.py:add_session:complete",
-                        "message": "会话已添加到基础管理器",
-                        "data": {
-                            "session_id": session_id,
-                            "session_in_tasks": session_id in self._tasks,
-                            "session_in_metadata": session_id in self._session_metadata,
-                            "total_sessions": len(self._tasks)
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
     
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """获取会话信息"""

@@ -69,61 +69,14 @@ def create_app(config=None):
     
     # 初始化扩展（SocketIO、任务管理器等）
     from app.extensions import init_extensions, start_background_tasks
-    # #region agent log
-    import json
-    import time as time_module
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "APP_INIT",
-                "location": "app/__init__.py:create_app:init_extensions",
-                "message": "开始初始化扩展",
-                "data": {"async_mode": async_mode},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     init_extensions(socketio)
     
     # ⚠️ 关键修复：先注册SocketIO事件处理器，再导入路由模块
     # 这样可以确保terminal模块中的socketio变量在导入时就能获取到正确的实例
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "APP_INIT",
-                "location": "app/__init__.py:create_app:register_terminal_handlers",
-                "message": "开始注册终端处理器",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     from app.routes.terminal import register_terminal_handlers
     register_terminal_handlers(socketio)
     
     # 注册路由（在SocketIO处理器注册之后）
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "APP_INIT",
-                "location": "app/__init__.py:create_app:register_blueprints",
-                "message": "开始注册路由蓝图",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     from app.routes import status, upload, download, fota, terminal, frontend
     app.register_blueprint(frontend.bp)  # 前端路由（首页）
     app.register_blueprint(status.bp)
@@ -138,38 +91,8 @@ def create_app(config=None):
     _register_error_handlers(app)
     
     # 启动后台任务（状态刷新循环）
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "APP_INIT",
-                "location": "app/__init__.py:create_app:start_background_tasks",
-                "message": "启动后台任务",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     start_background_tasks()
     
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "APP_INIT",
-                "location": "app/__init__.py:create_app:complete",
-                "message": "应用初始化完成",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     
     return app
 

@@ -22,23 +22,6 @@ class UploadService:
     
     def __init__(self):
         """初始化上传服务"""
-        # #region agent log
-        import json
-        import time as time_module
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "UPLOAD_SERVICE_INIT",
-                    "location": "app/api/upload_service.py:UploadService.__init__",
-                    "message": "上传服务初始化",
-                    "data": {},
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         self.upload_tasks: Dict[str, Dict[str, Any]] = {}
         self.upload_tasks_lock = threading.Lock()
     
@@ -298,57 +281,11 @@ def do_batch_upload_process(task_id, server_name, server_ip, filename, file_info
         
         file_obj = open(file_info["temp_path"], 'rb')
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "BATCH_UPLOAD_FILE_OPENED",
-                    "location": "app/api/upload_service.py:do_batch_upload_process:file_opened",
-                    "message": "批量上传文件对象已打开",
-                    "data": {
-                        "task_id": task_id,
-                        "server_name": server_name,
-                        "server_ip": server_ip,
-                        "filename": filename,
-                        "temp_path": file_info["temp_path"],
-                        "file_size": file_info["file_size"],
-                        "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown",
-                        "file_obj_seekable": file_obj.seekable() if hasattr(file_obj, 'seekable') else "unknown"
-                    },
-                    "timestamp": int(time.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         # 确保文件对象位置在开头
         if hasattr(file_obj, 'seek'):
             file_obj.seek(0)
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "BATCH_UPLOAD_BEFORE_UPLOAD",
-                    "location": "app/api/upload_service.py:do_batch_upload_process:before_upload",
-                    "message": "准备调用sftp_upload",
-                    "data": {
-                        "task_id": task_id,
-                        "server_name": server_name,
-                        "server_ip": server_ip,
-                        "filename": filename,
-                        "file_size": file_info["file_size"],
-                        "file_obj_tell_after_seek": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                    },
-                    "timestamp": int(time.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         try:
             ok, info = sftp_upload(
@@ -359,28 +296,6 @@ def do_batch_upload_process(task_id, server_name, server_ip, filename, file_info
                 check_file_exists=True
             )
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "BATCH_UPLOAD_AFTER_UPLOAD",
-                        "location": "app/api/upload_service.py:do_batch_upload_process:after_upload",
-                        "message": "sftp_upload完成",
-                        "data": {
-                            "task_id": task_id,
-                            "server_name": server_name,
-                            "server_ip": server_ip,
-                            "filename": filename,
-                            "ok": ok,
-                            "info": str(info) if info else None
-                        },
-                        "timestamp": int(time.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             # 处理上传结果
             result = {}

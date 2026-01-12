@@ -1178,22 +1178,10 @@
       // 3. 其他输入源
       // ClipboardAddon 不会干扰这个流程，它只是将粘贴的内容通过 onData 发送
       currentTerminal.onData(data => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1180',message:'前端终端onData事件触发',data:{dataLength:data.length,dataPreview:data.substring(0,50),socketExists:!!terminalSocket,socketConnected:terminalSocket?terminalSocket.connected:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'INPUT'})}).catch(()=>{});
-        // #endregion
-        
         if (terminalSocket && terminalSocket.connected) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1184',message:'前端发送terminal_input事件',data:{dataLength:data.length,dataPreview:data.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'INPUT'})}).catch(()=>{});
-          // #endregion
-          
           terminalSocket.emit('terminal_input', {
             data: data
           });
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1188',message:'SocketIO未连接，无法发送输入',data:{socketExists:!!terminalSocket,socketConnected:terminalSocket?terminalSocket.connected:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'INPUT'})}).catch(()=>{});
-          // #endregion
         }
       });
       
@@ -1210,24 +1198,24 @@
       // 创建SocketIO连接，明确指定传输方式和配置
       // 注意：如果WebSocket失败，会自动降级到polling
       const socketioOptions = {
-        transports: ['polling', 'websocket'],  // 先尝试polling，再升级到websocket
+        // 优先尝试 WebSocket，失败再回退 polling
+        transports: ['websocket', 'polling'],
         upgrade: true,
-        rememberUpgrade: false,  // 不记住升级，每次都尝试
+        rememberUpgrade: true,   // 若之前成功升级到 ws，下次直接尝试 ws
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         reconnectionAttempts: 5,
         timeout: 20000,
         forceNew: false,  // 复用连接
-        autoConnect: true
+        autoConnect: true,
+        // 确保与后端默认 Socket.IO 路径一致，避免 404
+        path: '/socket.io'
       };
       
       try {
-        // 参考迁移前实现：不指定namespace，使用默认命名空间
-        terminalSocket = io(socketioOptions);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1218',message:'SocketIO连接已创建',data:{socketExists:!!terminalSocket},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-        // #endregion
+        // 新版统一使用 /terminal namespace（后端已注册）
+        terminalSocket = io('/terminal', socketioOptions);
         console.log('SocketIO连接已创建:', terminalSocket);
       } catch (error) {
         console.error('SocketIO连接创建失败:', error);
@@ -1236,14 +1224,7 @@
         return;
       }
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1226',message:'准备注册connect事件监听器',data:{socketExists:!!terminalSocket},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-      // #endregion
       terminalSocket.on('connect', () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'frontend/static/js/main.js:1244',message:'前端connect事件触发',data:{socketId:terminalSocket.id,connected:terminalSocket.connected,transport:terminalSocket.io.engine.transport.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'FRONTEND_WEBSOCKET_CONNECTED'})}).catch(()=>{});
-        // #endregion
-        
         document.getElementById('terminalStatus').textContent = '已连接';
         document.getElementById('terminalStatus').style.color = '#10b981';
         const transport = terminalSocket.io.engine.transport.name;
@@ -1262,10 +1243,6 @@
         }
         
         // 启动SSH会话
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'frontend/static/js/main.js:1266',message:'前端发送start_ssh事件',data:{server_name:name,server_ip:ip,port:port,cols:dims?dims.cols:80,rows:dims?dims.rows:24,dims:dims},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'FRONTEND_START_SSH_EMIT'})}).catch(()=>{});
-        // #endregion
-
         terminalSocket.emit('start_ssh', {
           server_name: name,
           server_ip: ip,
@@ -1288,63 +1265,31 @@
       });
       
       terminalSocket.on('connected', (data) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'frontend/static/js/main.js:1287',message:'前端收到connected事件',data:{hasData:!!data,data:data,terminalExists:!!currentTerminal,terminalWriteExists:!!currentTerminal.write},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'FRONTEND_CONNECTED_RECEIVED'})}).catch(()=>{});
-        // #endregion
-        
         console.log('前端收到connected事件:', data);
         if (currentTerminal && currentTerminal.write) {
           currentTerminal.writeln('\\x1b[32m*** SSH连接已建立 ***\\x1b[0m\\r\\n');
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1293',message:'已写入connected消息到终端',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-          // #endregion
         } else {
           console.error('currentTerminal不存在或没有write方法');
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1297',message:'currentTerminal不存在或没有write方法',data:{terminalExists:!!currentTerminal,terminalWriteExists:!!currentTerminal.write},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-          // #endregion
         }
       });
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1273',message:'注册output事件监听器',data:{socketExists:!!terminalSocket,onMethodExists:!!terminalSocket.on},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-      // #endregion
       
       // 添加全局事件监听器用于调试（捕获所有事件）
       if (terminalSocket && typeof terminalSocket.onAny === 'function') {
         terminalSocket.onAny((eventName, ...args) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:onAny',message:'前端收到任何SocketIO事件',data:{eventName:eventName,argsCount:args.length,firstArgType:args[0]?typeof args[0]:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-          // #endregion
           console.log('前端收到SocketIO事件:', eventName, args);
         });
       }
       
       terminalSocket.on('output', (data) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'frontend/static/js/main.js:1320',message:'前端收到output事件',data:{hasData:!!data,hasDataData:!!data.data,dataType:typeof data,dataDataType:typeof data.data,dataLength:data.data?data.data.length:0,dataPreview:data.data?data.data.substring(0,50):null,terminalExists:!!currentTerminal,terminalWriteExists:!!currentTerminal.write},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'FRONTEND_OUTPUT_RECEIVED'})}).catch(()=>{});
-        // #endregion
         console.log('收到后端output事件:', data);
         // 终端输出
         if (data && data.data) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'frontend/static/js/main.js:1327',message:'准备写入终端',data:{dataLength:data.data.length,dataPreview:data.data.substring(0,50),terminalExists:!!currentTerminal,terminalWriteExists:!!currentTerminal.write},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'FRONTEND_OUTPUT_WRITE'})}).catch(()=>{});
-          // #endregion
           if (currentTerminal && currentTerminal.write) {
             currentTerminal.write(data.data);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1319',message:'已写入终端',data:{dataLength:data.data.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-            // #endregion
           } else {
             console.error('currentTerminal不存在或没有write方法');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1323',message:'currentTerminal不存在或没有write方法',data:{terminalExists:!!currentTerminal,terminalWriteExists:!!currentTerminal.write},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-            // #endregion
           }
         } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/507c52b6-82cf-4f56-af55-5a19e6949aa3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:1327',message:'output事件数据为空',data:{data:data,hasData:!!data,hasDataData:!!(data&&data.data)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-          // #endregion
           console.warn('output事件数据为空:', data);
         }
       });

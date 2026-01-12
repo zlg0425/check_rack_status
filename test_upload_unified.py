@@ -37,10 +37,10 @@ import json
 import socket
 import random
 import requests
-from check_rack_status import (
-    load_config, sftp_upload, create_transport, ensure_remote_dir,
-    validate_remote_path, check_remote_disk_space, check_remote_file_exists
-)
+from app.utils.config import load_config
+from app.utils.helpers import sftp_upload, create_transport, ensure_remote_dir, validate_remote_path, check_remote_disk_space, check_remote_file_exists, detect_fota_port, record_fota_timing, get_avg_fota_timing
+from core.ssh.transport import create_transport
+from core.sftp.operations import ensure_remote_dir, validate_remote_path, check_remote_disk_space, check_remote_file_exists
 import paramiko
 
 # 测试结果统计

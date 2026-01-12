@@ -25,7 +25,7 @@ from app.utils.helpers import (
 from app.utils.helpers import log_fota
 
 # 从 core.fota 导入 FOTA 相关函数
-from core.fota import record_fota_timing, get_avg_fota_timing
+from core.fota import detect_fota_port, record_fota_timing, get_avg_fota_timing
 
 # 从 app.extensions 导入任务管理器
 from app.extensions import get_task_managers
@@ -49,56 +49,9 @@ fota_transports_lock = fota_transport_manager._lock
 
 # detect_fota_port 已从 core.fota 导入
 # sftp_upload_with_cancel 已迁移到 core.sftp.operations
-# #region agent log
-import json
-import time as time_module
-try:
-    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-        f.write(json.dumps({
-            "sessionId": "system",
-            "runId": "run1",
-            "hypothesisId": "FOTA_SERVICE_IMPORT",
-            "location": "app/api/fota_service.py:import:sftp_upload_with_cancel",
-            "message": "导入sftp_upload_with_cancel",
-            "data": {},
-            "timestamp": int(time_module.time() * 1000)
-        }) + '\n')
-except Exception:
-    pass
-# #endregion
 try:
     from core.sftp.operations import sftp_upload_with_cancel
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "FOTA_SERVICE_IMPORT",
-                "location": "app/api/fota_service.py:import:sftp_upload_with_cancel:success",
-                "message": "sftp_upload_with_cancel导入成功",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
 except ImportError as e:
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "FOTA_SERVICE_IMPORT",
-                "location": "app/api/fota_service.py:import:sftp_upload_with_cancel:failed",
-                "message": "sftp_upload_with_cancel导入失败",
-                "data": {"error": str(e)},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     raise
 
 

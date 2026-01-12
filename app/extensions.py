@@ -22,23 +22,6 @@ def init_extensions(socketio_instance: 'SocketIO') -> None:
     """
     global _socketio, _task_managers
     
-    # #region agent log
-    import json
-    import time as time_module
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "EXTENSIONS_INIT",
-                "location": "app/extensions.py:init_extensions:start",
-                "message": "初始化扩展开始",
-                "data": {"socketio_available": socketio_instance is not None},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     
     _socketio = socketio_instance
     
@@ -46,21 +29,6 @@ def init_extensions(socketio_instance: 'SocketIO') -> None:
     from app.models.task import get_task_managers
     _task_managers = get_task_managers()
     
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "EXTENSIONS_INIT",
-                "location": "app/extensions.py:init_extensions:complete",
-                "message": "扩展初始化完成",
-                "data": {"task_managers_available": _task_managers is not None},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
 
 
 def get_socketio() -> Optional['SocketIO']:

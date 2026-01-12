@@ -122,30 +122,6 @@ def resolve_key_path(key_path: str) -> str:
     project_root = os.path.dirname(os.path.dirname(script_dir))
     resolved_path = os.path.join(project_root, key_path)
     
-    # #region agent log
-    try:
-        import json
-        import time
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "P",
-                "location": "app/utils/config.py:resolve_key_path",
-                "message": "解析私钥路径",
-                "data": {
-                    "key_path_input": key_path,
-                    "script_dir": script_dir,
-                    "project_root": project_root,
-                    "resolved_path": resolved_path,
-                    "file_exists": os.path.exists(resolved_path)
-                },
-                "timestamp": int(time.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
-    
     return resolved_path
 
 

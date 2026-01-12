@@ -58,56 +58,9 @@ fota_transports = fota_transport_manager._transports
 fota_transports_lock = fota_transport_manager._lock
 
 # sftp_upload_with_cancel 函数已迁移到 core.sftp.operations
-# #region agent log
-import json
-import time as time_module
-try:
-    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-        f.write(json.dumps({
-            "sessionId": "system",
-            "runId": "run1",
-            "hypothesisId": "FOTA_ROUTE_IMPORT",
-            "location": "app/routes/fota.py:import:sftp_upload_with_cancel",
-            "message": "导入sftp_upload_with_cancel",
-            "data": {},
-            "timestamp": int(time_module.time() * 1000)
-        }) + '\n')
-except Exception:
-    pass
-# #endregion
 try:
     from core.sftp.operations import sftp_upload_with_cancel
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "FOTA_ROUTE_IMPORT",
-                "location": "app/routes/fota.py:import:sftp_upload_with_cancel:success",
-                "message": "sftp_upload_with_cancel导入成功",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
 except ImportError as e:
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "FOTA_ROUTE_IMPORT",
-                "location": "app/routes/fota.py:import:sftp_upload_with_cancel:failed",
-                "message": "sftp_upload_with_cancel导入失败",
-                "data": {"error": str(e)},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     raise
 
 
@@ -659,23 +612,6 @@ def api_fota_progress(task_id):
 @bp.route("/batch-fota", methods=["POST"])
 def api_batch_fota():
     """批量FOTA接口 - 支持自动端口检测和服务器类型验证"""
-    # #region agent log
-    import json
-    import time as time_module
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "BATCH_FOTA_START",
-                "location": "app/routes/fota.py:api_batch_fota:start",
-                "message": "批量FOTA请求开始",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     try:
         port_str = request.form.get("port", "0")  # 允许传入0
         servers_json = request.form.get("servers", "[]")
@@ -848,56 +784,11 @@ def api_batch_fota():
                 transport = None
                 sftp = None
                 try:
-                    # #region agent log
-                    import json
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": "system",
-                                "runId": "run1",
-                                "hypothesisId": "BATCH_FOTA_CANCEL",
-                                "location": "app/routes/fota.py:do_batch_fota:start",
-                                "message": "批量FOTA任务开始",
-                                "data": {
-                                    "task_id": tid,
-                                    "server_name": sname,
-                                    "server_ip": sip,
-                                    "batch_id": batch_id,
-                                    "batch_id_in_dict": batch_id in batch_fota_tasks,
-                                    "batch_cancelled": batch_fota_tasks[batch_id].get("cancelled", False) if batch_id in batch_fota_tasks else "unknown"
-                                },
-                                "timestamp": int(time.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                     
                     # 检查是否已取消
                     with batch_fota_tasks_lock:
                         batch_exists = batch_id in batch_fota_tasks
                         batch_cancelled = batch_fota_tasks[batch_id].get("cancelled", False) if batch_exists else False
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "BATCH_FOTA_CANCEL",
-                                    "location": "app/routes/fota.py:do_batch_fota:check_cancel",
-                                    "message": "检查批量任务取消状态",
-                                    "data": {
-                                        "task_id": tid,
-                                        "server_name": sname,
-                                        "batch_id": batch_id,
-                                        "batch_exists": batch_exists,
-                                        "batch_cancelled": batch_cancelled,
-                                        "will_cancel": not batch_exists or batch_cancelled
-                                    },
-                                    "timestamp": int(time.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                         if not batch_exists or batch_cancelled:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
@@ -958,30 +849,6 @@ def api_batch_fota():
                         with batch_fota_tasks_lock:
                             batch_exists = batch_id in batch_fota_tasks
                             batch_cancelled = batch_fota_tasks[batch_id].get("cancelled", False) if batch_exists else False
-                            # #region agent log
-                            try:
-                                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "system",
-                                        "runId": "run1",
-                                        "hypothesisId": "BATCH_FOTA_CANCEL",
-                                        "location": "app/routes/fota.py:update_fota_progress:check_cancel",
-                                        "message": "update_fota_progress检查取消状态",
-                                        "data": {
-                                            "task_id": tid,
-                                            "server_name": sname,
-                                            "batch_id": batch_id,
-                                            "batch_exists": batch_exists,
-                                            "batch_cancelled": batch_cancelled,
-                                            "will_cancel": not batch_exists or batch_cancelled,
-                                            "progress": progress,
-                                            "status": status
-                                        },
-                                        "timestamp": int(time.time() * 1000)
-                                    }) + '\n')
-                            except Exception:
-                                pass
-                            # #endregion
                             if not batch_exists or batch_cancelled:
                                 return True  # 返回True表示已取消
                         return False
@@ -1035,51 +902,7 @@ def api_batch_fota():
                                 if cancelled:
                                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                                     return
-                                # #region agent log
-                                try:
-                                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                        f.write(json.dumps({
-                                            "sessionId": "system",
-                                            "runId": "run1",
-                                            "hypothesisId": "SSH_CONNECTION_ERROR",
-                                            "location": "app/routes/fota.py:do_batch_fota:before_remote_remove",
-                                            "message": "准备删除远端文件",
-                                            "data": {
-                                                "task_id": tid,
-                                                "server_name": sname,
-                                                "server_ip": sip,
-                                                "port": port,
-                                                "remote_path": remote_path,
-                                                "batch_id": batch_id
-                                            },
-                                            "timestamp": int(time.time() * 1000)
-                                        }) + '\n')
-                                except Exception:
-                                    pass
-                                # #endregion
                                 remove_ok, remove_error = remote_remove(sname, sip, port, remote_path)
-                                # #region agent log
-                                try:
-                                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                        f.write(json.dumps({
-                                            "sessionId": "system",
-                                            "runId": "run1",
-                                            "hypothesisId": "SSH_CONNECTION_ERROR",
-                                            "location": "app/routes/fota.py:do_batch_fota:after_remote_remove",
-                                            "message": "删除远端文件完成",
-                                            "data": {
-                                                "task_id": tid,
-                                                "server_name": sname,
-                                                "server_ip": sip,
-                                                "port": port,
-                                                "remove_ok": remove_ok,
-                                                "remove_error": remove_error if not remove_ok else None
-                                            },
-                                            "timestamp": int(time.time() * 1000)
-                                        }) + '\n')
-                                except Exception:
-                                    pass
-                                # #endregion
                                 if not remove_ok:
                                     log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 删除远端文件失败: {remove_error}")
                                     # 删除失败不影响上传，继续执行
@@ -1103,28 +926,6 @@ def api_batch_fota():
                     with batch_fota_tasks_lock:
                         batch_exists_check = batch_id in batch_fota_tasks
                         batch_cancelled_check = batch_fota_tasks[batch_id].get("cancelled", False) if batch_exists_check else False
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "BATCH_FOTA_CANCEL",
-                                    "location": "app/routes/fota.py:do_batch_fota:before_upload_check",
-                                    "message": "删除文件后、开始上传前的取消检查",
-                                    "data": {
-                                        "task_id": tid,
-                                        "server_name": sname,
-                                        "batch_id": batch_id,
-                                        "batch_exists": batch_exists_check,
-                                        "batch_cancelled": batch_cancelled_check,
-                                        "will_cancel": not batch_exists_check or batch_cancelled_check
-                                    },
-                                    "timestamp": int(time.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                         if not batch_exists_check or batch_cancelled_check:
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
@@ -1143,29 +944,6 @@ def api_batch_fota():
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                             return
                         upload_start_time = time.time()
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "SSH_CONNECTION_ERROR",
-                                    "location": "app/routes/fota.py:do_batch_fota:before_sftp_upload",
-                                    "message": "准备上传文件",
-                                    "data": {
-                                        "task_id": tid,
-                                        "server_name": sname,
-                                        "server_ip": sip,
-                                        "port": port,
-                                        "filename": filename,
-                                        "file_size": actual_file_size,
-                                        "batch_id": batch_id
-                                    },
-                                    "timestamp": int(time.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                         # 从临时文件打开文件对象用于上传（每个任务都需要独立的文件对象）
                         # 使用实际文件大小上传（确保与MD5计算一致）
                         task_file_obj = open(temp_file_path, 'rb')
@@ -1174,58 +952,12 @@ def api_batch_fota():
                                 sname, sip, port, fota_target_dir, filename, stream=task_file_obj, file_size=actual_file_size, progress_callback=upload_progress_cb, batch_id=batch_id, task_id=tid, batch_fota_tasks=batch_fota_tasks, batch_fota_tasks_lock=batch_fota_tasks_lock, fota_transports=fota_transports, fota_transports_lock=fota_transports_lock
                             )
                         except Exception as upload_exc:
-                            # #region agent log
-                            try:
-                                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "system",
-                                        "runId": "run1",
-                                        "hypothesisId": "SSH_CONNECTION_ERROR",
-                                        "location": "app/routes/fota.py:do_batch_fota:sftp_upload_exception",
-                                        "message": "上传文件时发生异常",
-                                        "data": {
-                                            "task_id": tid,
-                                            "server_name": sname,
-                                            "server_ip": sip,
-                                            "port": port,
-                                            "exception_type": type(upload_exc).__name__,
-                                            "exception_message": str(upload_exc),
-                                            "batch_id": batch_id
-                                        },
-                                        "timestamp": int(time.time() * 1000)
-                                    }) + '\n')
-                            except Exception:
-                                pass
-                            # #endregion
                             log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 上传文件时发生异常: {type(upload_exc).__name__}: {upload_exc}")
                             raise
                         finally:
                             task_file_obj.close()
                         upload_duration = time.time() - upload_start_time
                         record_fota_timing("file_upload", upload_duration, file_size)
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "SSH_CONNECTION_ERROR",
-                                    "location": "app/routes/fota.py:do_batch_fota:after_sftp_upload",
-                                    "message": "上传文件完成",
-                                    "data": {
-                                        "task_id": tid,
-                                        "server_name": sname,
-                                        "server_ip": sip,
-                                        "port": port,
-                                        "ok": ok,
-                                        "info": str(info) if info else None,
-                                        "batch_id": batch_id
-                                    },
-                                    "timestamp": int(time.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                         if transport_ref:
                             transport = transport_ref
                         if sftp_ref:
@@ -1235,29 +967,6 @@ def api_batch_fota():
                         with batch_fota_tasks_lock:
                             batch_exists_after_upload = batch_id in batch_fota_tasks
                             batch_cancelled_after_upload = batch_fota_tasks[batch_id].get("cancelled", False) if batch_exists_after_upload else False
-                            # #region agent log
-                            try:
-                                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "system",
-                                        "runId": "run1",
-                                        "hypothesisId": "BATCH_FOTA_CANCEL",
-                                        "location": "app/routes/fota.py:do_batch_fota:after_upload_check",
-                                        "message": "上传后取消检查",
-                                        "data": {
-                                            "task_id": tid,
-                                            "server_name": sname,
-                                            "batch_id": batch_id,
-                                            "batch_exists": batch_exists_after_upload,
-                                            "batch_cancelled": batch_cancelled_after_upload,
-                                            "will_cancel": not batch_exists_after_upload or batch_cancelled_after_upload,
-                                            "upload_ok": ok
-                                        },
-                                        "timestamp": int(time.time() * 1000)
-                                    }) + '\n')
-                            except Exception:
-                                pass
-                            # #endregion
                             if not batch_exists_after_upload or batch_cancelled_after_upload:
                                 log_fota(f"[批量FOTA/{batch_id}] [{sname}/{sip}:{port}] 任务已取消")
                                 return

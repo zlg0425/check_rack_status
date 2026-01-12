@@ -58,23 +58,6 @@ def _init_batch_upload_vars():
 @bp.route("/upload", methods=["POST"])
 def api_upload():
     """单文件上传"""
-    # #region agent log
-    import json
-    import time as time_module
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "UPLOAD_START",
-                "location": "app/routes/upload.py:api_upload:start",
-                "message": "单文件上传请求开始",
-                "data": {},
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     try:
         server_name = request.form.get("server_name", "").strip()
         server_ip = request.form.get("server_ip", "").strip()
@@ -626,28 +609,6 @@ def api_upload_folder():
 
         task_id = str(uuid.uuid4())
         
-        # #region agent log
-        import json
-        import time as time_module
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "FOLDER_UPLOAD_REQUEST",
-                    "location": "app/routes/upload.py:api_upload_folder:start",
-                    "message": "文件夹上传请求开始",
-                    "data": {
-                        "file_count": len(files),
-                        "server_name": server_name,
-                        "server_ip": server_ip,
-                        "port": port
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         # 关键修复：在主线程中（请求处理期间）先读取所有文件数据并保存到临时文件
         # 这样后台线程就不需要访问 Flask 的流（流在请求结束后会被关闭）
@@ -668,25 +629,6 @@ def api_upload_folder():
                     relative_path = os.path.basename(file.filename)  # 只有文件名
                     filename = os.path.basename(file.filename)
                 
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "FOLDER_UPLOAD_PREPARE",
-                            "location": "app/routes/upload.py:api_upload_folder:prepare_file",
-                            "message": "在主线程中准备文件",
-                            "data": {
-                                "relative_path": relative_path,
-                                "filename": filename,
-                                "file_stream_closed": file.stream.closed if hasattr(file.stream, 'closed') else "unknown"
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 
                 # 在主线程中读取文件数据并保存到临时文件
                 temp_file = None
@@ -704,26 +646,6 @@ def api_upload_folder():
                     
                     file_size = os.path.getsize(temp_file_path)
                     
-                    # #region agent log
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": "system",
-                                "runId": "run1",
-                                "hypothesisId": "FOLDER_UPLOAD_PREPARE_SUCCESS",
-                                "location": "app/routes/upload.py:api_upload_folder:prepare_file_success",
-                                "message": "文件已保存到临时文件",
-                                "data": {
-                                    "relative_path": relative_path,
-                                    "filename": filename,
-                                    "temp_file_path": temp_file_path,
-                                    "file_size": file_size
-                                },
-                                "timestamp": int(time_module.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                     
                     file_list.append({
                         "temp_file_path": temp_file_path,
@@ -732,26 +654,6 @@ def api_upload_folder():
                         "file_size": file_size
                     })
                 except Exception as e:
-                    # #region agent log
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": "system",
-                                "runId": "run1",
-                                "hypothesisId": "FOLDER_UPLOAD_PREPARE_ERROR",
-                                "location": "app/routes/upload.py:api_upload_folder:prepare_file_error",
-                                "message": "准备文件时出错",
-                                "data": {
-                                    "relative_path": relative_path,
-                                    "filename": filename,
-                                    "error": str(e),
-                                    "error_type": type(e).__name__
-                                },
-                                "timestamp": int(time_module.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                     if temp_file:
                         try:
                             temp_file.close()
@@ -794,29 +696,6 @@ def api_upload_folder():
             fail_count = 0
             total_files = len(file_list)
             
-            # #region agent log
-            import json
-            import time as time_module
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "FOLDER_UPLOAD_START",
-                        "location": "app/routes/upload.py:do_upload_folder:start",
-                        "message": "文件夹上传任务开始",
-                        "data": {
-                            "task_id": task_id,
-                            "total_files": total_files,
-                            "server_name": server_name,
-                            "server_ip": server_ip,
-                            "port": port
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             try:
                 for idx, file_info in enumerate(file_list):
@@ -826,30 +705,6 @@ def api_upload_folder():
                     filename = file_info["filename"]
                     file_size = file_info["file_size"]
                     
-                    # #region agent log
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": "system",
-                                "runId": "run1",
-                                "hypothesisId": "FOLDER_UPLOAD_FILE",
-                                "location": "app/routes/upload.py:do_upload_folder:file_start",
-                                "message": "开始处理文件",
-                                "data": {
-                                    "task_id": task_id,
-                                    "file_index": idx + 1,
-                                    "total_files": total_files,
-                                    "relative_path": relative_path,
-                                    "filename": filename,
-                                    "temp_file_path": temp_file_path,
-                                    "file_size": file_size,
-                                    "temp_file_exists": os.path.exists(temp_file_path) if temp_file_path else False
-                                },
-                                "timestamp": int(time_module.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                     
                     # 更新当前文件信息
                     with upload_tasks_lock:
@@ -876,81 +731,16 @@ def api_upload_folder():
                         # 验证文件大小
                         actual_file_size = os.path.getsize(temp_file_path)
                         if actual_file_size != file_size:
-                            # #region agent log
-                            try:
-                                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "system",
-                                        "runId": "run1",
-                                        "hypothesisId": "FOLDER_UPLOAD_SIZE_MISMATCH",
-                                        "location": "app/routes/upload.py:do_upload_folder:size_check",
-                                        "message": "文件大小不匹配",
-                                        "data": {
-                                            "task_id": task_id,
-                                            "file_index": idx + 1,
-                                            "relative_path": relative_path,
-                                            "expected_size": file_size,
-                                            "actual_size": actual_file_size,
-                                            "temp_file_path": temp_file_path
-                                        },
-                                        "timestamp": int(time_module.time() * 1000)
-                                    }) + '\n')
-                            except Exception:
-                                pass
-                            # #endregion
                             # 使用实际文件大小
                             file_size = actual_file_size
                         
                         file_obj = open(temp_file_path, 'rb')
                         
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "FOLDER_UPLOAD_FILE_OPENED",
-                                    "location": "app/routes/upload.py:do_upload_folder:file_opened",
-                                    "message": "文件对象已打开",
-                                    "data": {
-                                        "task_id": task_id,
-                                        "file_index": idx + 1,
-                                        "relative_path": relative_path,
-                                        "temp_file_path": temp_file_path,
-                                        "file_size": file_size,
-                                        "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                                    },
-                                    "timestamp": int(time_module.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                         
                         # 确保文件对象位置在开头
                         if hasattr(file_obj, 'seek'):
                             file_obj.seek(0)
                         
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "FOLDER_UPLOAD_BEFORE_UPLOAD",
-                                    "location": "app/routes/upload.py:do_upload_folder:before_upload",
-                                    "message": "准备上传文件",
-                                    "data": {
-                                        "task_id": task_id,
-                                        "file_index": idx + 1,
-                                        "relative_path": relative_path,
-                                        "file_size": file_size,
-                                        "file_obj_tell_after_seek": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                                    },
-                                    "timestamp": int(time_module.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                         
                         # 创建SFTP连接并确保目录存在
                         transport = create_transport(server_name, server_ip, port)
@@ -978,27 +768,6 @@ def api_upload_folder():
                                 check_file_exists=True
                             )
                             
-                            # #region agent log
-                            try:
-                                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "system",
-                                        "runId": "run1",
-                                        "hypothesisId": "FOLDER_UPLOAD_AFTER_UPLOAD",
-                                        "location": "app/routes/upload.py:do_upload_folder:after_upload",
-                                        "message": "上传完成",
-                                        "data": {
-                                            "task_id": task_id,
-                                            "file_index": idx + 1,
-                                            "relative_path": relative_path,
-                                            "ok": ok,
-                                            "info": str(info) if info else None
-                                        },
-                                        "timestamp": int(time_module.time() * 1000)
-                                    }) + '\n')
-                            except Exception:
-                                pass
-                            # #endregion
                             
                             if ok:
                                 success_count += 1
@@ -1011,27 +780,6 @@ def api_upload_folder():
                     except Exception as e:
                         fail_count += 1
                         log_srv(f"文件夹上传异常 [{relative_path}]: {e}")
-                        # #region agent log
-                        try:
-                            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                                f.write(json.dumps({
-                                    "sessionId": "system",
-                                    "runId": "run1",
-                                    "hypothesisId": "FOLDER_UPLOAD_FILE_EXCEPTION",
-                                    "location": "app/routes/upload.py:do_upload_folder:exception",
-                                    "message": "文件上传异常",
-                                    "data": {
-                                        "task_id": task_id,
-                                        "file_index": idx + 1,
-                                        "relative_path": relative_path,
-                                        "error": str(e),
-                                        "error_type": type(e).__name__
-                                    },
-                                    "timestamp": int(time_module.time() * 1000)
-                                }) + '\n')
-                        except Exception:
-                            pass
-                        # #endregion
                     finally:
                         if file_obj:
                             try:
@@ -1071,28 +819,6 @@ def api_upload_folder():
                         "current_file": ""
                     }
             except Exception as e:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "FOLDER_UPLOAD_TASK_EXCEPTION",
-                            "location": "app/routes/upload.py:do_upload_folder:task_exception",
-                            "message": "文件夹上传任务异常",
-                            "data": {
-                                "task_id": task_id,
-                                "error": str(e),
-                                "error_type": type(e).__name__,
-                                "success_count": success_count,
-                                "fail_count": fail_count,
-                                "total_files": total_files
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 
                 # 清理所有临时文件
                 for file_info in file_list:

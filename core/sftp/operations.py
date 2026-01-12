@@ -146,31 +146,6 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         (success, result): success为True时result是文件路径，为False时result是错误信息或文件存在信息
             如果check_file_exists=True且文件存在，返回(True, {"path": remote_path, "exists": True, "is_directory": False})
     """
-    # #region agent log
-    import json
-    import time as time_module
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "SFTP_UPLOAD",
-                "location": "core/sftp/operations.py:sftp_upload:start",
-                "message": "sftp_upload函数调用",
-                "data": {
-                    "server_name": server_name,
-                    "ip": ip,
-                    "port": port,
-                    "filename": filename,
-                    "has_stream": stream is not None,
-                    "has_data": data is not None,
-                    "file_size": file_size
-                },
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     # 验证路径，防止路径遍历攻击
     path_valid, path_error = validate_remote_path(target_dir)
     if not path_valid:
@@ -192,57 +167,11 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
         total_size = file_size
         file_obj = stream
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "SFTP_UPLOAD_STREAM_CHECK",
-                    "location": "core/sftp/operations.py:sftp_upload:stream_check",
-                    "message": "检查文件流状态",
-                    "data": {
-                        "server_name": server_name,
-                        "ip": ip,
-                        "port": port,
-                        "filename": filename,
-                        "file_size": file_size,
-                        "stream_type": type(stream).__name__,
-                        "stream_seekable": stream.seekable() if hasattr(stream, 'seekable') else "unknown",
-                        "stream_tell": stream.tell() if hasattr(stream, 'tell') else "unknown",
-                        "stream_closed": stream.closed if hasattr(stream, 'closed') else "unknown"
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         # 确保文件流位置在开头（如果支持seek）
         if hasattr(file_obj, 'seek') and hasattr(file_obj, 'tell'):
             current_pos = file_obj.tell()
             if current_pos != 0:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "SFTP_UPLOAD_STREAM_SEEK",
-                            "location": "core/sftp/operations.py:sftp_upload:stream_seek",
-                            "message": "重置文件流位置到开头",
-                            "data": {
-                                "server_name": server_name,
-                                "ip": ip,
-                                "port": port,
-                                "filename": filename,
-                                "current_pos": current_pos
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 file_obj.seek(0)
     elif data is not None:
         # 如果提供data参数，转换为流（向后兼容）
@@ -305,107 +234,15 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
             if hasattr(file_obj, 'seek') and hasattr(file_obj, 'tell'):
                 current_pos = file_obj.tell()
                 if current_pos != 0:
-                    # #region agent log
-                    try:
-                        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                            f.write(json.dumps({
-                                "sessionId": "system",
-                                "runId": "run1",
-                                "hypothesisId": "SFTP_UPLOAD_FINAL_SEEK",
-                                "location": "core/sftp/operations.py:sftp_upload:final_seek",
-                                "message": "在putfo调用前再次重置文件流位置",
-                                "data": {
-                                    "server_name": server_name,
-                                    "ip": ip,
-                                    "port": port,
-                                    "filename": filename,
-                                    "current_pos": current_pos
-                                },
-                                "timestamp": int(time_module.time() * 1000)
-                            }) + '\n')
-                    except Exception:
-                        pass
-                    # #endregion
                     file_obj.seek(0)
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_BEFORE_PUTFO",
-                        "location": "core/sftp/operations.py:sftp_upload:before_putfo",
-                        "message": "准备调用putfo上传",
-                        "data": {
-                            "server_name": server_name,
-                            "ip": ip,
-                            "port": port,
-                            "filename": filename,
-                            "remote_path": remote_path,
-                            "total_size": total_size,
-                            "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown",
-                            "file_obj_seekable": file_obj.seekable() if hasattr(file_obj, 'seekable') else "unknown"
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             # 使用putfo方法上传，支持流式上传
             try:
                 sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             except Exception as putfo_error:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "SFTP_UPLOAD_PUTFO_ERROR",
-                            "location": "core/sftp/operations.py:sftp_upload:putfo_error",
-                            "message": "putfo上传失败",
-                            "data": {
-                                "server_name": server_name,
-                                "ip": ip,
-                                "port": port,
-                                "filename": filename,
-                                "remote_path": remote_path,
-                                "total_size": total_size,
-                                "error": str(putfo_error),
-                                "error_type": type(putfo_error).__name__,
-                                "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 raise
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_AFTER_PUTFO",
-                        "location": "core/sftp/operations.py:sftp_upload:after_putfo",
-                        "message": "putfo上传完成",
-                        "data": {
-                            "server_name": server_name,
-                            "ip": ip,
-                            "port": port,
-                            "filename": filename,
-                            "remote_path": remote_path,
-                            "total_size": total_size
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             sftp.close()
             safe_close_transport(transport)
@@ -454,84 +291,13 @@ def sftp_upload(server_name: str, ip: str, port: int, target_dir: str, filename:
                 safe_close_transport(transport)
                 return False, space_error
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "SFTP_UPLOAD_BEFORE_PUTFO",
-                    "location": "core/sftp/operations.py:sftp_upload:before_putfo",
-                    "message": "准备调用putfo上传",
-                    "data": {
-                        "server_name": server_name,
-                        "ip": ip,
-                        "port": port,
-                        "filename": filename,
-                        "remote_path": remote_path,
-                        "total_size": total_size,
-                        "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown",
-                        "file_obj_seekable": file_obj.seekable() if hasattr(file_obj, 'seekable') else "unknown"
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         # 使用putfo方法上传，支持流式上传
         try:
             sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
         except Exception as putfo_error:
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_PUTFO_ERROR",
-                        "location": "core/sftp/operations.py:sftp_upload:putfo_error",
-                        "message": "putfo上传失败",
-                        "data": {
-                            "server_name": server_name,
-                            "ip": ip,
-                            "port": port,
-                            "filename": filename,
-                            "remote_path": remote_path,
-                            "total_size": total_size,
-                            "error": str(putfo_error),
-                            "error_type": type(putfo_error).__name__,
-                            "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             raise
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "SFTP_UPLOAD_AFTER_PUTFO",
-                    "location": "core/sftp/operations.py:sftp_upload:after_putfo",
-                    "message": "putfo上传完成",
-                    "data": {
-                        "server_name": server_name,
-                        "ip": ip,
-                        "port": port,
-                        "filename": filename,
-                        "remote_path": remote_path,
-                        "total_size": total_size
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         sftp.close()
         safe_close_transport(transport)
@@ -1076,31 +842,6 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
     import time as time_module
     import json
     
-    # #region agent log
-    try:
-        with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "sessionId": "system",
-                "runId": "run1",
-                "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL",
-                "location": "core/sftp/operations.py:sftp_upload_with_cancel:start",
-                "message": "sftp_upload_with_cancel函数调用",
-                "data": {
-                    "server_name": server_name,
-                    "ip": ip,
-                    "port": port,
-                    "filename": filename,
-                    "batch_id": batch_id,
-                    "task_id": task_id,
-                    "has_stream": stream is not None,
-                    "has_data": data is not None,
-                    "file_size": file_size
-                },
-                "timestamp": int(time_module.time() * 1000)
-            }) + '\n')
-    except Exception:
-        pass
-    # #endregion
     
     # 如果没有提供batch_fota_tasks等参数，尝试从app.routes.fota导入
     if batch_fota_tasks is None or batch_fota_tasks_lock is None:
@@ -1110,43 +851,8 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                 batch_fota_tasks = imported_batch_fota_tasks
             if batch_fota_tasks_lock is None:
                 batch_fota_tasks_lock = imported_batch_fota_tasks_lock
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL",
-                        "location": "core/sftp/operations.py:sftp_upload_with_cancel:import_batch_fota",
-                        "message": "从app.routes.fota导入batch_fota_tasks",
-                        "data": {
-                            "batch_id": batch_id,
-                            "imported": True
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
         except ImportError:
             # 如果导入失败，使用None（取消检查将被禁用）
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL",
-                        "location": "core/sftp/operations.py:sftp_upload_with_cancel:import_batch_fota_failed",
-                        "message": "从app.routes.fota导入batch_fota_tasks失败",
-                        "data": {
-                            "batch_id": batch_id
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             pass
     
     if fota_transports is None or fota_transports_lock is None:
@@ -1172,57 +878,11 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
         total_size = file_size
         file_obj = stream
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL_STREAM_CHECK",
-                    "location": "core/sftp/operations.py:sftp_upload_with_cancel:stream_check",
-                    "message": "检查文件流状态",
-                    "data": {
-                        "server_name": server_name,
-                        "ip": ip,
-                        "port": port,
-                        "filename": filename,
-                        "file_size": file_size,
-                        "stream_type": type(stream).__name__,
-                        "stream_seekable": stream.seekable() if hasattr(stream, 'seekable') else "unknown",
-                        "stream_tell": stream.tell() if hasattr(stream, 'tell') else "unknown",
-                        "stream_closed": stream.closed if hasattr(stream, 'closed') else "unknown"
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         # 确保文件流位置在开头（如果支持seek）
         if hasattr(file_obj, 'seek') and hasattr(file_obj, 'tell'):
             current_pos = file_obj.tell()
             if current_pos != 0:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL_STREAM_SEEK",
-                            "location": "core/sftp/operations.py:sftp_upload_with_cancel:stream_seek",
-                            "message": "重置文件流位置到开头",
-                            "data": {
-                                "server_name": server_name,
-                                "ip": ip,
-                                "port": port,
-                                "filename": filename,
-                                "current_pos": current_pos
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 file_obj.seek(0)
     elif data is not None:
         # 如果提供data参数，转换为流（向后兼容）
@@ -1283,59 +943,10 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                     putfo_last_log_time = current_time
                     putfo_last_transferred = transferred
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL_BEFORE_PUTFO",
-                        "location": "core/sftp/operations.py:sftp_upload_with_cancel:before_putfo",
-                        "message": "准备调用putfo上传",
-                        "data": {
-                            "server_name": server_name,
-                            "ip": ip,
-                            "port": port,
-                            "filename": filename,
-                            "remote_path": remote_path,
-                            "total_size": total_size,
-                            "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown",
-                            "file_obj_seekable": file_obj.seekable() if hasattr(file_obj, 'seekable') else "unknown"
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             try:
                 sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             except Exception as putfo_error:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL_PUTFO_ERROR",
-                            "location": "core/sftp/operations.py:sftp_upload_with_cancel:putfo_error",
-                            "message": "putfo上传失败",
-                            "data": {
-                                "server_name": server_name,
-                                "ip": ip,
-                                "port": port,
-                                "filename": filename,
-                                "remote_path": remote_path,
-                                "total_size": total_size,
-                                "error": str(putfo_error),
-                                "error_type": type(putfo_error).__name__,
-                                "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 raise
             
             # 上传完成后清理引用（但保持连接打开，因为可能还需要用于MD5校验）
@@ -1408,59 +1019,10 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                     putfo_last_log_time = current_time
                     putfo_last_transferred = transferred
             
-            # #region agent log
-            try:
-                with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps({
-                        "sessionId": "system",
-                        "runId": "run1",
-                        "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL_BEFORE_PUTFO",
-                        "location": "core/sftp/operations.py:sftp_upload_with_cancel:before_putfo",
-                        "message": "准备调用putfo上传",
-                        "data": {
-                            "server_name": server_name,
-                            "ip": ip,
-                            "port": port,
-                            "filename": filename,
-                            "remote_path": remote_path,
-                            "total_size": total_size,
-                            "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown",
-                            "file_obj_seekable": file_obj.seekable() if hasattr(file_obj, 'seekable') else "unknown"
-                        },
-                        "timestamp": int(time_module.time() * 1000)
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
             
             try:
                 sftp.putfo(file_obj, remote_path, file_size=total_size, callback=putfo_progress_callback)
             except Exception as putfo_error:
-                # #region agent log
-                try:
-                    with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps({
-                            "sessionId": "system",
-                            "runId": "run1",
-                            "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL_PUTFO_ERROR",
-                            "location": "core/sftp/operations.py:sftp_upload_with_cancel:putfo_error",
-                            "message": "putfo上传失败",
-                            "data": {
-                                "server_name": server_name,
-                                "ip": ip,
-                                "port": port,
-                                "filename": filename,
-                                "remote_path": remote_path,
-                                "total_size": total_size,
-                                "error": str(putfo_error),
-                                "error_type": type(putfo_error).__name__,
-                                "file_obj_tell": file_obj.tell() if hasattr(file_obj, 'tell') else "unknown"
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }) + '\n')
-                except Exception:
-                    pass
-                # #endregion
                 raise
             
             return True, remote_path, transport, sftp
@@ -1483,30 +1045,6 @@ def sftp_upload_with_cancel(server_name: str, ip: str, port: int, target_dir: st
                 if task_id in fota_transports:
                     del fota_transports[task_id]
         
-        # #region agent log
-        try:
-            with open('.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({
-                    "sessionId": "system",
-                    "runId": "run1",
-                    "hypothesisId": "SFTP_UPLOAD_WITH_CANCEL",
-                    "location": "core/sftp/operations.py:sftp_upload_with_cancel:exception",
-                    "message": "sftp_upload_with_cancel发生异常",
-                    "data": {
-                        "server_name": server_name,
-                        "ip": ip,
-                        "port": port,
-                        "filename": filename,
-                        "batch_id": batch_id,
-                        "task_id": task_id,
-                        "error_type": type(e).__name__,
-                        "error_message": error_msg
-                    },
-                    "timestamp": int(time_module.time() * 1000)
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
         
         if "任务已取消" in error_msg:
             return False, "任务已取消", None, None
